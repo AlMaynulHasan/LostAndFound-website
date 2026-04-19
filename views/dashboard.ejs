@@ -1,0 +1,530 @@
+<% 
+  const items = myItems || [];
+  const lostItems = items.filter(item => item.type === 'lost');
+  const foundItems = items.filter(item => item.type === 'found');
+  const resolvedItems = items.filter(item => item.status === 'resolved');
+  const openItems = items.filter(item => item.status !== 'resolved');
+  const returnPendingItems = items.filter(item => item.status === 'return_pending');
+  const returnRate = items.length ? Math.round((resolvedItems.length / items.length) * 100) : 0;
+  const latestItem = items
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || b.dateLost) - new Date(a.createdAt || a.dateLost))[0];
+%>
+
+<section class="dashboard-hero">
+  <div class="page-hero dashboard-hero__panel">
+    <div>
+      <span class="badge-soft"><i class="bi bi-grid me-2"></i>Dashboard</span>
+      <h2 class="mt-3 mb-2">Your reporting hub</h2>
+      <p class="text-muted mb-3">
+        Track every report, spot trends, and take action faster.
+        <% if (latestItem) { %>
+          Latest activity: <strong><%= latestItem.name %></strong> on
+          <strong><%= new Date(latestItem.dateLost || latestItem.createdAt).toLocaleDateString() %></strong>.
+        <% } %>
+      </p>
+      <div class="dashboard-hero__insights">
+        <div class="insight-chip">
+          <span class="insight-label">Return success</span>
+          <strong><%= returnRate %>%</strong>
+        </div>
+        <div class="insight-chip">
+          <span class="insight-label">Open cases</span>
+          <strong><%= openItems.length %></strong>
+        </div>
+        <div class="insight-chip">
+          <span class="insight-label">Return pending</span>
+          <strong><%= returnPendingItems.length %></strong>
+        </div>
+      </div>
+    </div>
+    <div class="dashboard-hero__actions">
+      <a href="/items/report" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Report New Item
+      </a>
+      <a href="/items/report" class="btn btn-ghost">
+        <i class="bi bi-upload me-1"></i>Share Update
+      </a>
+    </div>
+  </div>
+
+  <div class="stat-grid dashboard-stats">
+    <div class="stat-card">
+      <span>All Reports</span>
+      <h3 class="mb-0"><%= items.length %></h3>
+    </div>
+    <div class="stat-card">
+      <span>Open Cases</span>
+      <h3 class="mb-0"><%= openItems.length %></h3>
+    </div>
+    <div class="stat-card">
+      <span>Lost Items</span>
+      <h3 class="mb-0"><%= lostItems.length %></h3>
+    </div>
+    <div class="stat-card">
+      <span>Found Items</span>
+      <h3 class="mb-0"><%= foundItems.length %></h3>
+    </div>
+  </div>
+</section>
+
+<section class="dashboard-spotlight">
+  <div class="spotlight-card">
+    <div>
+      <span class="spotlight-label">Need attention</span>
+      <h4 class="mb-1"><%= (claimRequests || []).length %> claim requests</h4>
+      <p class="text-muted mb-0">Review pending claims to keep reports moving.</p>
+    </div>
+    <a href="/dashboard" class="btn btn-outline-primary btn-sm">Review now</a>
+  </div>
+  <div class="spotlight-card">
+    <div>
+      <span class="spotlight-label">Return window</span>
+      <h4 class="mb-1"><%= returnPendingItems.length %> returns pending</h4>
+      <p class="text-muted mb-0">Mark items as returned after admin confirmation.</p>
+    </div>
+    <a href="/items/returned" class="btn btn-ghost btn-sm">View returned</a>
+  </div>
+  <div class="spotlight-card">
+    <div>
+      <span class="spotlight-label">Momentum</span>
+      <h4 class="mb-1"><%= returnRate %>% return success</h4>
+      <p class="text-muted mb-0">You are helping close cases quickly.</p>
+    </div>
+    <a href="/items/report" class="btn btn-primary btn-sm">Report new</a>
+  </div>
+</section>
+
+<div class="row g-4">
+  <div class="col-lg-3">
+    <aside class="sidebar-card dashboard-sidebar">
+      <h5 class="mb-3">Quick Actions</h5>
+      <div class="list-group dashboard-nav">
+        <a href="/dashboard" class="list-group-item list-group-item-action active">
+          <i class="bi bi-collection me-2"></i>My Reports
+        </a>
+        <a href="/items/report" class="list-group-item list-group-item-action">
+          <i class="bi bi-plus-circle me-2"></i>Report New Item
+        </a>
+        <a href="/items/report" class="list-group-item list-group-item-action">
+          <i class="bi bi-bell me-2"></i>Notify Admin
+        </a>
+      </div>
+      <div class="dashboard-note mt-4">
+        <h6 class="mb-2"><i class="bi bi-lightning-charge me-2"></i>Pro Tip</h6>
+        <p class="text-muted mb-0">Add clear photos and exact locations to speed up matches.</p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="col-lg-9">
+    <div class="dashboard-header">
+      <h3 class="mb-0">My Reported Items</h3>
+      <div class="dashboard-header__meta text-muted">
+        <i class="bi bi-clock-history me-2"></i>
+        Updated <%= new Date().toLocaleDateString() %>
+      </div>
+    </div>
+
+    <% if (claimRequests && claimRequests.length) { %>
+      <div class="dashboard-claims mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h5 class="mb-0">Claim Requests</h5>
+          <span class="badge rounded-pill bg-danger"><%= claimRequests.length %></span>
+        </div>
+        <div class="row g-3">
+          <% claimRequests.forEach((req) => { %>
+            <% const score = req.claim.score || {}; %>
+            <% const scoreTotal = typeof score.total === 'number' ? score.total : null; %>
+            <div class="col-12">
+              <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                      <h6 class="mb-1"><%= req.itemName %> <span class="text-muted">(<%= req.itemType %>)</span></h6>
+                      <p class="mb-1 text-muted small">Claimant: <%= req.claim.claimantName %></p>
+                      <% if (req.claim.description) { %>
+                        <p class="mb-2"><%= req.claim.description %></p>
+                      <% } %>
+                      <% if (req.claim.claimedDate) { %>
+                        <p class="mb-2 text-muted small">Claimed date: <%= req.claim.claimedDate %></p>
+                      <% } %>
+                      <% if (scoreTotal !== null) { %>
+                        <div class="mb-2">
+                          <div class="d-flex justify-content-between small text-muted">
+                            <span>Confidence</span>
+                            <span><%= scoreTotal %>%</span>
+                          </div>
+                          <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-<%= scoreTotal >= 70 ? 'success' : scoreTotal >= 40 ? 'warning' : 'danger' %>" role="progressbar" style="width: <%= scoreTotal %>%"></div>
+                          </div>
+                        </div>
+                      <% } %>
+                      <% if (req.claim.answers && req.claim.answers.length) { %>
+                        <div class="mt-2">
+                          <div class="text-muted small mb-1">Verification answers</div>
+                          <% req.claim.answers.forEach((answer, idx) => { %>
+                            <% const questionText = (req.verificationQuestions && req.verificationQuestions[idx]) ? req.verificationQuestions[idx].question : `Q${idx + 1}`; %>
+                            <% const matched = req.claim.score && Array.isArray(req.claim.score.answerMatches) ? req.claim.score.answerMatches[idx] : null; %>
+                            <div class="small d-flex align-items-center gap-2">
+                              <strong><%= questionText %>:</strong> <span><%= answer || '—' %></span>
+                              <% if (matched === true) { %>
+                                <span class="badge bg-success">Match</span>
+                              <% } else if (matched === false) { %>
+                                <span class="badge bg-danger">No match</span>
+                              <% } %>
+                            </div>
+                          <% }) %>
+                        </div>
+                      <% } %>
+                      <% if (req.claim.proofPath) { %>
+                        <a href="<%= req.claim.proofPath %>" class="btn btn-outline-primary btn-sm" target="_blank">View proof</a>
+                      <% } %>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <form method="post" action="/items/<%= req.itemId %>/claim/<%= req.claim.id %>/accept">
+                        <button class="btn btn-primary btn-sm" type="submit">Accept</button>
+                      </form>
+                      <form method="post" action="/items/<%= req.itemId %>/claim/<%= req.claim.id %>/deny">
+                        <button class="btn btn-outline-secondary btn-sm" type="submit">Deny</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (claimHistory && claimHistory.length) { %>
+      <div class="dashboard-claims mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h5 class="mb-0">Claim History</h5>
+          <span class="badge rounded-pill bg-secondary"><%= claimHistory.length %></span>
+        </div>
+        <div class="row g-3">
+          <% claimHistory.forEach((entry) => { %>
+            <% const historyScore = entry.claim.score || {}; %>
+            <% const historyScoreTotal = typeof historyScore.total === 'number' ? historyScore.total : null; %>
+            <% const historyStatus = entry.claim.status || 'pending'; %>
+            <% const returnStatus = entry.claim.returnStatus || 'none'; %>
+            <div class="col-12">
+              <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                      <h6 class="mb-1"><%= entry.itemName %> <span class="text-muted">(<%= entry.itemType %>)</span></h6>
+                      <p class="mb-1 text-muted small">Claimant: <%= entry.claim.claimantName %></p>
+                      <% if (entry.claim.description) { %>
+                        <p class="mb-2"><%= entry.claim.description %></p>
+                      <% } %>
+                      <% if (entry.claim.claimedDate) { %>
+                        <p class="mb-2 text-muted small">Claimed date: <%= entry.claim.claimedDate %></p>
+                      <% } %>
+                      <% if (historyScoreTotal !== null) { %>
+                        <div class="mb-2">
+                          <div class="d-flex justify-content-between small text-muted">
+                            <span>Confidence</span>
+                            <span><%= historyScoreTotal %>%</span>
+                          </div>
+                          <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-<%= historyScoreTotal >= 70 ? 'success' : historyScoreTotal >= 40 ? 'warning' : 'danger' %>" role="progressbar" style="width: <%= historyScoreTotal %>%"></div>
+                          </div>
+                        </div>
+                      <% } %>
+                      <% if (entry.claim.answers && entry.claim.answers.length) { %>
+                        <div class="mt-2">
+                          <div class="text-muted small mb-1">Verification answers</div>
+                          <% entry.claim.answers.forEach((answer, idx) => { %>
+                            <% const questionText = (entry.verificationQuestions && entry.verificationQuestions[idx]) ? entry.verificationQuestions[idx].question : `Q${idx + 1}`; %>
+                            <% const matched = entry.claim.score && Array.isArray(entry.claim.score.answerMatches) ? entry.claim.score.answerMatches[idx] : null; %>
+                            <div class="small d-flex align-items-center gap-2">
+                              <strong><%= questionText %>:</strong> <span><%= answer || '—' %></span>
+                              <% if (matched === true) { %>
+                                <span class="badge bg-success">Match</span>
+                              <% } else if (matched === false) { %>
+                                <span class="badge bg-danger">No match</span>
+                              <% } %>
+                            </div>
+                          <% }) %>
+                        </div>
+                      <% } %>
+                      <% if (entry.claim.proofPath) { %>
+                        <a href="<%= entry.claim.proofPath %>" class="btn btn-outline-primary btn-sm" target="_blank">View proof</a>
+                      <% } %>
+                      <% if (returnStatus === 'requested') { %>
+                        <div class="mt-2">
+                          <span class="badge bg-warning text-dark">Return requested</span>
+                        </div>
+                      <% } %>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-2">
+                      <span class="badge rounded-pill bg-<%= historyStatus === 'accepted' ? 'success' : historyStatus === 'denied' ? 'secondary' : 'warning' %> <%= historyStatus === 'pending' ? 'text-dark' : 'text-white' %> text-uppercase"><%= historyStatus %></span>
+                      <a href="/items/<%= entry.itemId %>" class="btn btn-outline-secondary btn-sm">View item</a>
+                      <% if (returnStatus === 'requested') { %>
+                        <form method="post" action="/items/<%= entry.itemId %>/claim/<%= entry.claim.id %>/return-confirm">
+                          <button class="btn btn-outline-danger btn-sm" type="submit">Confirm return</button>
+                        </form>
+                      <% } %>
+                      <% if (returnStatus === 'completed') { %>
+                        <span class="badge bg-success">Return completed</span>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (myClaims && myClaims.length) { %>
+      <div class="dashboard-claims mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h5 class="mb-0">My Claim Requests</h5>
+          <span class="badge rounded-pill bg-primary"><%= myClaims.length %></span>
+        </div>
+        <div class="row g-3">
+          <% myClaims.forEach((entry) => { %>
+            <% const status = entry.claim.status || 'pending'; %>
+            <% const statusClass = status === 'accepted' ? 'success' : status === 'denied' ? 'secondary' : 'warning'; %>
+            <% const statusTextClass = status === 'pending' ? 'text-dark' : 'text-white'; %>
+            <% const returnStatus = entry.claim.returnStatus || 'none'; %>
+            <% const returnWindowEndsAt = entry.claim.returnWindowEndsAt ? new Date(entry.claim.returnWindowEndsAt) : null; %>
+            <% const returnDueAt = entry.claim.returnDueAt ? new Date(entry.claim.returnDueAt) : null; %>
+            <% const canRequestReturn = status === 'accepted' && returnStatus === 'none' && returnWindowEndsAt && new Date() <= returnWindowEndsAt; %>
+            <div class="col-12">
+              <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                      <h6 class="mb-1">
+                        <%= entry.itemName %>
+                        <span class="text-muted">(<%= entry.itemType %>)</span>
+                      </h6>
+                      <% if (entry.ownerName) { %>
+                        <p class="mb-1 text-muted small">Reporter: <%= entry.ownerName %></p>
+                      <% } %>
+                      <% if (entry.claim.description) { %>
+                        <p class="mb-2"><%= entry.claim.description %></p>
+                      <% } %>
+                      <% if (entry.claim.proofPath) { %>
+                        <a href="<%= entry.claim.proofPath %>" class="btn btn-outline-primary btn-sm" target="_blank">View proof</a>
+                      <% } %>
+                      <% if (status === 'accepted' && returnDueAt) { %>
+                        <p class="mt-2 mb-0 text-muted small">Return due by: <%= returnDueAt.toLocaleDateString() %></p>
+                      <% } %>
+                      <% if (status === 'accepted' && returnWindowEndsAt) { %>
+                        <p class="mt-1 mb-0 text-muted small">Return request deadline: <%= returnWindowEndsAt.toLocaleDateString() %></p>
+                      <% } %>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-2">
+                      <span class="badge rounded-pill bg-<%= statusClass %> <%= statusTextClass %> text-uppercase"><%= status %></span>
+                      <a href="/items/<%= entry.itemId %>" class="btn btn-outline-secondary btn-sm">View item</a>
+                      <% if (returnStatus === 'requested') { %>
+                        <span class="badge bg-warning text-dark">Return requested</span>
+                      <% } %>
+                      <% if (returnStatus === 'completed') { %>
+                        <span class="badge bg-success">Return completed</span>
+                      <% } %>
+                      <% if (canRequestReturn) { %>
+                        <form method="post" action="/items/<%= entry.itemId %>/claim/<%= entry.claim.id %>/return-request">
+                          <button class="btn btn-outline-danger btn-sm" type="submit">Request return</button>
+                        </form>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    <% } %>
+
+    <ul class="nav nav-pills dashboard-tabs" id="dashboardTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-all" data-bs-toggle="pill" data-bs-target="#panel-all" type="button" role="tab">
+          All <span class="ms-1 badge rounded-pill bg-light text-dark"><%= items.length %></span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-lost" data-bs-toggle="pill" data-bs-target="#panel-lost" type="button" role="tab">
+          Lost <span class="ms-1 badge rounded-pill bg-light text-dark"><%= lostItems.length %></span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-found" data-bs-toggle="pill" data-bs-target="#panel-found" type="button" role="tab">
+          Found <span class="ms-1 badge rounded-pill bg-light text-dark"><%= foundItems.length %></span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-resolved" data-bs-toggle="pill" data-bs-target="#panel-resolved" type="button" role="tab">
+          Resolved <span class="ms-1 badge rounded-pill bg-light text-dark"><%= resolvedItems.length %></span>
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content dashboard-tab-content">
+      <div class="tab-pane fade show active" id="panel-all" role="tabpanel" aria-labelledby="tab-all">
+        <% if (items.length > 0) { %>
+          <div class="row g-3">
+            <% items.forEach(item => { %>
+              <div class="col-md-6 col-xl-4">
+                <div class="card h-100 dashboard-card">
+                  <% if (item.photoPath) { %>
+                    <img src="<%= item.photoPath %>" class="card-img-top" alt="<%= item.name %>">
+                  <% } else { %>
+                    <div class="dashboard-card__image">
+                      <i class="bi bi-image text-muted fs-1"></i>
+                    </div>
+                  <% } %>
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2 flex-wrap gap-2">
+                      <span class="badge bg-<%= item.type === 'lost' ? 'danger' : 'success' %>"><%= item.type.toUpperCase() %></span>
+                      <span class="badge bg-<%= item.status === 'resolved' ? 'success' : 'secondary' %>"><%= item.status %></span>
+                    </div>
+                    <h5 class="card-title text-truncate"><%= item.name %></h5>
+                    <div class="dashboard-card__meta">
+                      <span><i class="bi bi-geo-alt me-1"></i><%= item.location %></span>
+                      <span><i class="bi bi-calendar me-1"></i><%= new Date(item.dateLost || item.createdAt).toLocaleDateString() %></span>
+                    </div>
+                  </div>
+                  <div class="card-footer bg-white">
+                    <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <div class="empty-state">
+            <i class="bi bi-folder2-open display-4 text-muted"></i>
+            <p class="mt-3 text-muted">You haven't reported any items yet.</p>
+            <a href="/items/report" class="btn btn-primary mt-2">Report an Item</a>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="tab-pane fade" id="panel-lost" role="tabpanel" aria-labelledby="tab-lost">
+        <% if (lostItems.length > 0) { %>
+          <div class="row g-3">
+            <% lostItems.forEach(item => { %>
+              <div class="col-md-6 col-xl-4">
+                <div class="card h-100 dashboard-card">
+                  <% if (item.photoPath) { %>
+                    <img src="<%= item.photoPath %>" class="card-img-top" alt="<%= item.name %>">
+                  <% } else { %>
+                    <div class="dashboard-card__image">
+                      <i class="bi bi-image text-muted fs-1"></i>
+                    </div>
+                  <% } %>
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2 flex-wrap gap-2">
+                      <span class="badge bg-<%= item.type === 'lost' ? 'danger' : 'success' %>"><%= item.type.toUpperCase() %></span>
+                      <span class="badge bg-<%= item.status === 'resolved' ? 'success' : 'secondary' %>"><%= item.status %></span>
+                    </div>
+                    <h5 class="card-title text-truncate"><%= item.name %></h5>
+                    <div class="dashboard-card__meta">
+                      <span><i class="bi bi-geo-alt me-1"></i><%= item.location %></span>
+                      <span><i class="bi bi-calendar me-1"></i><%= new Date(item.dateLost || item.createdAt).toLocaleDateString() %></span>
+                    </div>
+                  </div>
+                  <div class="card-footer bg-white">
+                    <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <div class="empty-state">
+            <i class="bi bi-emoji-frown display-4 text-muted"></i>
+            <p class="mt-3 text-muted">No lost items yet. You're in the clear.</p>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="tab-pane fade" id="panel-found" role="tabpanel" aria-labelledby="tab-found">
+        <% if (foundItems.length > 0) { %>
+          <div class="row g-3">
+            <% foundItems.forEach(item => { %>
+              <div class="col-md-6 col-xl-4">
+                <div class="card h-100 dashboard-card">
+                  <% if (item.photoPath) { %>
+                    <img src="<%= item.photoPath %>" class="card-img-top" alt="<%= item.name %>">
+                  <% } else { %>
+                    <div class="dashboard-card__image">
+                      <i class="bi bi-image text-muted fs-1"></i>
+                    </div>
+                  <% } %>
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2 flex-wrap gap-2">
+                      <span class="badge bg-<%= item.type === 'lost' ? 'danger' : 'success' %>"><%= item.type.toUpperCase() %></span>
+                      <span class="badge bg-<%= item.status === 'resolved' ? 'success' : 'secondary' %>"><%= item.status %></span>
+                    </div>
+                    <h5 class="card-title text-truncate"><%= item.name %></h5>
+                    <div class="dashboard-card__meta">
+                      <span><i class="bi bi-geo-alt me-1"></i><%= item.location %></span>
+                      <span><i class="bi bi-calendar me-1"></i><%= new Date(item.dateLost || item.createdAt).toLocaleDateString() %></span>
+                    </div>
+                  </div>
+                  <div class="card-footer bg-white">
+                    <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <div class="empty-state">
+            <i class="bi bi-emoji-smile display-4 text-muted"></i>
+            <p class="mt-3 text-muted">No found items yet. Keep an eye out!</p>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="tab-pane fade" id="panel-resolved" role="tabpanel" aria-labelledby="tab-resolved">
+        <% if (resolvedItems.length > 0) { %>
+          <div class="row g-3">
+            <% resolvedItems.forEach(item => { %>
+              <div class="col-md-6 col-xl-4">
+                <div class="card h-100 dashboard-card">
+                  <% if (item.photoPath) { %>
+                    <img src="<%= item.photoPath %>" class="card-img-top" alt="<%= item.name %>">
+                  <% } else { %>
+                    <div class="dashboard-card__image">
+                      <i class="bi bi-image text-muted fs-1"></i>
+                    </div>
+                  <% } %>
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2 flex-wrap gap-2">
+                      <span class="badge bg-<%= item.type === 'lost' ? 'danger' : 'success' %>"><%= item.type.toUpperCase() %></span>
+                      <span class="badge bg-success"><%= item.status %></span>
+                    </div>
+                    <h5 class="card-title text-truncate"><%= item.name %></h5>
+                    <div class="dashboard-card__meta">
+                      <span><i class="bi bi-geo-alt me-1"></i><%= item.location %></span>
+                      <span><i class="bi bi-calendar me-1"></i><%= new Date(item.dateLost || item.createdAt).toLocaleDateString() %></span>
+                    </div>
+                  </div>
+                  <div class="card-footer bg-white">
+                    <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <div class="empty-state">
+            <i class="bi bi-stars display-4 text-muted"></i>
+            <p class="mt-3 text-muted">No resolved items yet. You're close!</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>

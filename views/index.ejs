@@ -1,0 +1,169 @@
+<%
+  const itemsList = items || [];
+  const foundItems = itemsList.filter((item) => item.type === 'found');
+  const lostItems = itemsList.filter((item) => item.type === 'lost');
+  const returnedItems = itemsList.filter((item) => item.status === 'resolved');
+  const activeItems = itemsList.filter((item) => item.status !== 'resolved');
+  const featuredFound = featuredItems && featuredItems.length
+    ? featuredItems
+    : [
+        { slug: 'navy-backpack', name: 'Navy Backpack', location: 'Library Hall', dateLost: '2026-03-09', category: 'Bag', type: 'found', photoPath: '/images/item-backpack.jpeg' },
+        { slug: 'black-water-bottle', name: 'Black Water Bottle', location: 'Gym Entrance', dateLost: '2026-03-10', category: 'Others', type: 'found', photoPath: '/images/item-bottle.jpeg' },
+        { slug: 'blue-earbuds-case', name: 'Blue Earbuds Case', location: 'Student Center', dateLost: '2026-03-08', category: 'Electronics', type: 'found', photoPath: '/images/item-earbuds.jpeg' },
+        { slug: 'id-card', name: 'ID Card', location: 'Cafeteria', dateLost: '2026-03-07', category: 'ID Card', type: 'found', photoPath: '/images/item-idcard.jpeg' },
+        { slug: 'calculator', name: 'Calculator', location: 'Engineering Block', dateLost: '2026-03-06', category: 'Electronics', type: 'found', photoPath: '/images/item-calculator.jpeg' },
+        { slug: 'textbook-jac', name: 'Textbook: Jac', location: 'Lecture Hall B', dateLost: '2026-03-05', category: 'Books', type: 'found', photoPath: '/images/item-book.jpeg' },
+      ];
+
+  const recentFound = foundItems.slice(0, 6);
+  const recentLost = lostItems.slice(0, 6);
+%>
+
+<section class="hero-landing full-bleed">
+  <div class="container hero-landing__inner">
+    <div class="hero-copy">
+      <div class="hero-badge">
+        <span><i class="bi bi-shield-check me-2"></i>Campus-verified lost &amp; found</span>
+      </div>
+      <div class="eyebrow">Lost &amp; found, done right</div>
+      <h1>Find what’s yours. Return what’s theirs.</h1>
+      <p>
+        Post in seconds, scan smart matches, and reunite items safely through campus staff.
+        Built for students, designed for trust.
+      </p>
+      <div class="hero-actions">
+        <a href="/items/report" class="btn btn-sun">Report Item</a>
+        <a href="/items/search" class="btn btn-ghost">Browse Feed</a>
+      </div>
+      <div class="hero-trust">
+        <span class="hero-chip"><i class="bi bi-lightning-charge"></i>Fast matching</span>
+        <span class="hero-chip"><i class="bi bi-geo-alt"></i>Campus locations</span>
+        <span class="hero-chip"><i class="bi bi-people"></i>Community-driven</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-image-frame">
+        <img src="/images/students-helping.png" alt="Students helping students" />
+      </div>
+      <div class="hero-gradient-orb hero-orb-1"></div>
+      <div class="hero-gradient-orb hero-orb-2"></div>
+      <div class="hero-gradient-orb hero-orb-3"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="stats-strip">
+    <div>
+      <h3><%= foundItems.length || 128 %></h3>
+      <span>Items Found</span>
+    </div>
+    <div>
+      <h3><%= returnedItems.length || 76 %></h3>
+      <span>Items Returned</span>
+    </div>
+    <div>
+      <h3><%= activeItems.length || 52 %></h3>
+      <span>Active Reports</span>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading section-heading--row">
+    <div>
+      <h2>Recently Found Items</h2>
+      <p>Check the latest items turned in by students, faculty, and staff.</p>
+    </div>
+    <a href="/items/found" class="btn btn-ghost btn-sm">See more</a>
+  </div>
+  <div class="featured-grid">
+    <% (recentFound.length ? recentFound : featuredFound).forEach((item) => { %>
+    <article class="item-card reveal">
+      <div class="item-image">
+        <% if (item.photoPath) { %>
+        <img src="<%= item.photoPath %>" alt="<%= item.name %>" />
+        <% } else { %>
+        <i class="bi bi-camera" style="font-size: 2rem; color: rgba(11, 31, 42, 0.6);"></i>
+        <% } %>
+      </div>
+      <div class="item-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><%= item.name %></h5>
+          <span class="status-pill status-found">Found</span>
+        </div>
+        <div class="item-meta">
+          <div><i class="bi bi-geo-alt me-1"></i><%= item.location || 'Campus' %></div>
+          <div><i class="bi bi-calendar-event me-1"></i><%= item.dateLost || 'Recent' %></div>
+        </div>
+        <% const detailsLink = item.id ? '/items/' + item.id : (item.slug ? '/items/featured/' + item.slug : '/items/found'); %>
+        <a href="<%= detailsLink %>" class="btn btn-outline-primary btn-sm">View details</a>
+      </div>
+    </article>
+    <% }) %>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="section-heading section-heading--row">
+    <div>
+      <h2>Recently Lost Items</h2>
+      <p>See what students are currently searching for around campus.</p>
+    </div>
+    <a href="/items/lost" class="btn btn-ghost btn-sm">See more</a>
+  </div>
+  <div class="featured-grid">
+    <% (recentLost.length ? recentLost : []).forEach((item) => { %>
+    <article class="item-card reveal">
+      <div class="item-image">
+        <% if (item.photoPath) { %>
+        <img src="<%= item.photoPath %>" alt="<%= item.name %>" />
+        <% } else { %>
+        <i class="bi bi-camera" style="font-size: 2rem; color: rgba(11, 31, 42, 0.6);"></i>
+        <% } %>
+      </div>
+      <div class="item-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><%= item.name %></h5>
+          <span class="status-pill status-lost">Lost</span>
+        </div>
+        <div class="item-meta">
+          <div><i class="bi bi-geo-alt me-1"></i><%= item.location || 'Campus' %></div>
+          <div><i class="bi bi-calendar-event me-1"></i><%= item.dateLost || 'Recent' %></div>
+        </div>
+        <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm">View details</a>
+      </div>
+    </article>
+    <% }) %>
+
+    <% if (!recentLost.length) { %>
+      <div class="empty-state w-100">
+        <p class="text-muted mb-0">No recent lost items yet.</p>
+      </div>
+    <% } %>
+  </div>
+</section>
+<section class="section">
+  <div class="section-heading center">
+    <h2>How It Works</h2>
+    <p>Three simple steps to reunite items with their owners.</p>
+  </div>
+  <div class="steps-grid">
+    <div class="step-card reveal">
+      <div class="step-index">01</div>
+      <h5>Report</h5>
+      <p class="text-muted">Share what you lost or found with clear details and a photo.</p>
+    </div>
+    <div class="step-card reveal">
+      <div class="step-index">02</div>
+      <h5>Match</h5>
+      <p class="text-muted">Our feed and smart suggestions highlight possible matches.</p>
+    </div>
+    <div class="step-card reveal">
+      <div class="step-index">03</div>
+      <h5>Return</h5>
+      <p class="text-muted">Coordinate safe pickups through campus security or staff.</p>
+    </div>
+  </div>
+</section>
