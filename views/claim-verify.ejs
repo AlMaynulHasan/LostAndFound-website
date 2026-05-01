@@ -1,0 +1,143 @@
+<%- include('partials/header') %>
+
+<div class="container mt-5 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-body p-5">
+          <div class="text-center mb-4">
+            <div class="rounded-circle" style="width: 80px; height: 80px; background: linear-gradient(135deg, #1aa6a0 0%, #10b981 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+              <i class="bi bi-check-circle text-white" style="font-size: 2rem;"></i>
+            </div>
+          </div>
+
+          <h2 class="text-center mb-2">Claim Verification</h2>
+          <p class="text-center text-muted mb-4">This QR code was scanned for item verification</p>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <div class="p-3 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block mb-1">Item</small>
+                <strong><%= item.name %></strong>
+                <div class="small text-muted"><i class="bi bi-tag"></i> <%= item.category %></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block mb-1">Status</small>
+                <strong>
+                  <% if (claim.status === 'pending') { %>
+                    <span class="badge bg-warning">Pending Review</span>
+                  <% } else if (claim.status === 'accepted') { %>
+                    <span class="badge bg-success">Accepted</span>
+                  <% } else if (claim.status === 'denied') { %>
+                    <span class="badge bg-danger">Denied</span>
+                  <% } else { %>
+                    <span class="badge bg-secondary"><%= claim.status %></span>
+                  <% } %>
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <hr />
+
+          <h5 class="mb-3">Claim Details</h5>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <small class="text-muted d-block mb-1"><i class="bi bi-person"></i> Claimant</small>
+              <strong><%= claim.claimantName || 'Anonymous' %></strong>
+            </div>
+            <div class="col-md-6">
+              <small class="text-muted d-block mb-1"><i class="bi bi-calendar"></i> Claim Date</small>
+              <strong><%= new Date(claim.claimedAt).toLocaleDateString() %></strong>
+            </div>
+            <div class="col-md-6">
+              <small class="text-muted d-block mb-1"><i class="bi bi-geo-alt"></i> Item Location</small>
+              <strong><%= item.location %></strong>
+            </div>
+            <div class="col-md-6">
+              <small class="text-muted d-block mb-1"><i class="bi bi-calendar-event"></i> Item Date</small>
+              <strong><%= item.dateLost %></strong>
+            </div>
+          </div>
+
+          <hr />
+
+          <h5 class="mb-3">Verification Score</h5>
+          <% if (claim.confidenceScore) { %>
+            <div class="p-3 rounded" style="background: rgba(26, 166, 160, 0.1);">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <strong>Overall Score</strong>
+                <span class="badge bg-primary" style="font-size: 1.1rem;">
+                  <%= claim.confidenceScore.total %>/100
+                </span>
+              </div>
+              <div class="mb-2">
+                <div class="d-flex justify-content-between mb-1">
+                  <small>Answer Accuracy</small>
+                  <small><%= claim.confidenceScore.answerPoints %>/40</small>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar" style="width: <%= (claim.confidenceScore.answerPoints / 40) * 100 %>%"></div>
+                </div>
+              </div>
+              <div class="mb-2">
+                <div class="d-flex justify-content-between mb-1">
+                  <small>Proof Provided</small>
+                  <small><%= claim.confidenceScore.proofPoints %>/40</small>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar bg-success" style="width: <%= (claim.confidenceScore.proofPoints / 40) * 100 %>%"></div>
+                </div>
+              </div>
+              <div class="mb-2">
+                <div class="d-flex justify-content-between mb-1">
+                  <small>Timeline Match</small>
+                  <small><%= claim.confidenceScore.timelinePoints %>/20</small>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar bg-warning" style="width: <%= (claim.confidenceScore.timelinePoints / 20) * 100 %>%"></div>
+                </div>
+              </div>
+            </div>
+          <% } else { %>
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              Score calculation pending
+            </div>
+          <% } %>
+
+          <hr />
+
+          <h5 class="mb-3">Instructions at Pickup</h5>
+          <div class="alert alert-info">
+            <strong><i class="bi bi-info-circle me-2"></i>Pickup Information</strong>
+            <p class="mb-0 mt-2">
+              <strong>Return Location:</strong> <%= item.returnInfo %><br>
+              <strong>Contact Person:</strong> <%= item.returnBy %><br>
+              <strong>Contact Method:</strong> <%= item.contactMethod %>
+            </p>
+          </div>
+
+          <div class="text-center mt-4">
+            <a href="/items/<%= item.id %>" class="btn btn-primary">
+              <i class="bi bi-arrow-left me-1"></i>Back to Item
+            </a>
+            <% if (currentUser && (String(currentUser.id) === String(item.userId) || currentUser.role === 'admin')) { %>
+              <a href="/dashboard" class="btn btn-outline-primary">
+                <i class="bi bi-speedometer2 me-1"></i>Go to Dashboard
+              </a>
+            <% } %>
+          </div>
+
+          <div class="alert alert-warning mt-4" role="alert">
+            <strong>Important:</strong> This QR code serves as a record of verification. Please retain this reference for your records.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

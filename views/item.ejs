@@ -173,21 +173,35 @@
   <div class="col-lg-4">
     <div class="card sidebar-card p-4">
       <h5 class="mb-3">Claim verification</h5>
-      <div class="text-center">
-        <div class="p-3 rounded" style="background: rgba(26, 166, 160, 0.1);">
-          <svg width="160" height="160" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="120" height="120" rx="12" fill="#f8fafc" />
-            <rect x="12" y="12" width="32" height="32" rx="6" fill="#1e3a8a" />
-            <rect x="76" y="12" width="32" height="32" rx="6" fill="#1e3a8a" />
-            <rect x="12" y="76" width="32" height="32" rx="6" fill="#1e3a8a" />
-            <rect x="52" y="52" width="16" height="16" rx="4" fill="#3b82f6" />
-            <rect x="76" y="76" width="16" height="16" rx="4" fill="#10b981" />
-            <rect x="52" y="20" width="12" height="12" rx="3" fill="#10b981" />
-            <rect x="28" y="52" width="12" height="12" rx="3" fill="#3b82f6" />
-          </svg>
+      <% if (item.claims && item.claims.length > 0) { %>
+        <div class="text-center">
+          <div class="p-3 rounded" style="background: rgba(26, 166, 160, 0.1);">
+            <% const firstClaim = item.claims[0]; %>
+            <img
+              src="/items/<%= item.id %>/claim/<%= firstClaim.id %>/qr"
+              alt="Claim verification QR code"
+              style="width: 100%; max-width: 220px; height: auto;"
+            />
+          </div>
+          <p class="text-muted mt-3 mb-0">
+            <small>Scan to verify the claim at pickup.</small>
+          </p>
+          <a href="/items/<%= item.id %>/claim/<%= firstClaim.id %>/verify" class="btn btn-sm btn-outline-primary mt-2" target="_blank">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Open verification
+          </a>
         </div>
-        <p class="text-muted mt-3 mb-0">Scan to verify the claim at pickup.</p>
-      </div>
+      <% } else { %>
+        <div class="text-center">
+          <div class="p-3 rounded" style="background: rgba(26, 166, 160, 0.1);">
+            <img
+              src="/items/<%= item.id %>/qr"
+              alt="Item share QR code"
+              style="width: 100%; max-width: 220px; height: auto;"
+            />
+          </div>
+          <p class="text-muted mt-3 mb-0"><small>Scan to open this item page and submit a claim.</small></p>
+        </div>
+      <% } %>
 
       <hr />
       <h6 class="mb-2">AI match suggestions</h6>

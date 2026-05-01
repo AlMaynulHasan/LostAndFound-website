@@ -1,14 +1,33 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs').promises;
+const QRCode = require('qrcode');
 const cloudinary = require('../services/cloudinary');
 const itemModel = require('../models/item');
 const messageModel = require('../models/message');
 
 const router = express.Router();
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../public/uploads');
+fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
+
+// Multer setup for local storage
+const localStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}-${uniqueSuffix}${ext}`);
+  }
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: localStorage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     const filetypes = /jpeg|jpg|png|webp/;
@@ -63,30 +82,16 @@ function optionalImageUpload(fieldName) {
         return res.redirect(req.originalUrl);
       }
 
-      if (req.file && !cloudinary.isConfigured) {
-        req.flash(
-          'error',
-          'Image upload is not available right now. Please add Cloudinary environment variables in Vercel.'
-        );
-        return res.redirect(req.originalUrl);
-      }
-
+      // If no file, proceed without image
       if (!req.file) {
         next();
         return;
       }
 
-      uploadBufferToCloudinary(req.file)
-        .then((result) => {
-          req.file.path = result.secure_url;
-          req.file.filename = result.public_id;
-          next();
-        })
-        .catch((uploadError) => {
-          console.error('Cloudinary upload failed:', uploadError);
-          req.flash('error', 'Image upload failed. Please try again.');
-          res.redirect(req.originalUrl);
-        });
+      // Image is already saved locally by disk storage
+      // Set the path to serve from /uploads/
+      req.file.path = `/uploads/${req.file.filename}`;
+      next();
     });
   };
 }
@@ -627,7 +632,84 @@ router.post('/:id/update', requireLogin, optionalImageUpload('photo'), async (re
   });
 
   req.flash('success', 'Item updated successfully.');
-  res.redirect(`/items/${item.id}`);
+  res.redirect(`/items/${req.params.id}`);
+});
+
+function getAbsoluteUrl(req, pathname) {
+  return `${req.protocol}://${req.get('host')}${pathname}`;
+}
+
+async function sendQrResponse(req, res, targetUrl) {
+  const options = {
+    errorCorrectionLevel: 'H',
+    margin: 2,
+    width: 320,
+    color: {
+      dark: '#111827',
+      light: '#FFFFFF',
+    },
+  };
+
+  if (req.query.format === 'json') {
+    const qrCode = await QRCode.toDataURL(targetUrl, options);
+    return res.json({ qrCode, targetUrl });
+  }
+
+  const qrPng = await QRCode.toBuffer(targetUrl, {
+    ...options,
+    type: 'png',
+  });
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'no-store');
+  return res.send(qrPng);
+}
+
+router.get('/:id/qr', async (req, res) => {
+  try {
+    const item = await itemModel.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const itemUrl = getAbsoluteUrl(req, `/items/${item.id}`);
+    return await sendQrResponse(req, res, itemUrl);
+  } catch (error) {
+    console.error('Item QR generation error:', error);
+    return res.status(500).json({ error: 'Failed to generate QR code' });
+  }
+});
+
+// QR Code endpoint for claim verification
+router.get('/:id/claim/:claimId/qr', async (req, res) => {
+  try {
+    const { id, claimId } = req.params;
+    const verificationUrl = getAbsoluteUrl(req, `/items/${id}/claim/${claimId}/verify`);
+    return await sendQrResponse(req, res, verificationUrl);
+  } catch (error) {
+    console.error('QR Code generation error:', error);
+    return res.status(500).json({ error: 'Failed to generate QR code' });
+  }
+});
+
+// Verify claim from QR code scan
+router.get('/:id/claim/:claimId/verify', async (req, res) => {
+  try {
+    const item = await itemModel.findById(req.params.id);
+    if (!item) return res.status(404).render('404', { title: 'Not Found' });
+    
+    const claim = item.claims && item.claims.find(c => c.id === req.params.claimId);
+    if (!claim) return res.status(404).render('404', { title: 'Claim not found' });
+    
+    res.render('claim-verify', {
+      title: 'Verify Claim',
+      item,
+      claim,
+      currentUser: req.session.user || null
+    });
+  } catch (error) {
+    console.error('Claim verification error:', error);
+    res.status(500).render('404', { title: 'Error' });
+  }
 });
 
 module.exports = router;

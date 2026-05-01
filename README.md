@@ -25,28 +25,54 @@ A simple web application to report, search, and claim lost and found items on ca
 # Install dependencies
 npm install
 
+# Create admin account (default credentials will be used)
+node scripts/create-admin.js
+
 # Start the server
 npm start
 ```
 
 Visit **http://localhost:3000** in your browser.
 
+### Default Admin Login
+- **Email:** `admin@campusfind.local`
+- **Password:** `Admin@12345`
+- Access admin panel: `http://localhost:3000/admin`
+
+### First Steps
+1. **Register a new user** at `/auth/register`
+2. **Report an item** at `/items/report` (lost or found)
+3. **Search items** at `/items/search`
+4. **View your dashboard** at `/dashboard`
+5. **Access admin panel** at `/admin` (with admin credentials)
+
 ### Configuration (Optional)
 
-Create a `.env` file for optional settings:
+Create a `.env` file in the project root for custom settings:
 
 ```bash
-# Session security (recommended to change)
-SESSION_SECRET=your-random-secret-key
+# Session security (change this to a random string)
+SESSION_SECRET=your-super-secret-random-string-12345
 
 # Image uploads (optional - Cloudinary)
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
-# Server port
+# Server port and environment
 PORT=3000
 NODE_ENV=development
+
+# Admin account (optional - use environment variables)
+ADMIN_EMAIL=your-custom-admin@example.com
+ADMIN_PASSWORD=your-secure-password
+ADMIN_NAME=Administrator
+ADMIN_STUDENT_ID=ADMIN-0001
+```
+
+Then create admin with custom credentials:
+```bash
+node scripts/create-admin.js
 ```
 
 ## 📁 Project Structure
@@ -197,13 +223,32 @@ PORT=3001 npm start
 **JSON file locked:**
 - Restart the server
 
+**Admin can't login:**
+```bash
+# Recreate admin account
+node scripts/create-admin.js
+```
+
+**Missing data files:**
+- Delete `data/` folder and restart server
+- Server will recreate JSON files automatically
+
 ## 📄 License
 
-MIT
+MIT License - Feel free to use this project for educational or commercial purposes.
 
 ## 👨‍💻 Contributing
 
-Feel free to fork and submit pull requests!
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📧 Support
+
+For issues, questions, or suggestions, please open an issue on GitHub.
 
 ---
 
