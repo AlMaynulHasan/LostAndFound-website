@@ -9,7 +9,6 @@ if (typeof util.isArray === 'function') {
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
 const bodyParser = require('body-parser');
 const flash = require('connect-flash');
 const expressLayouts = require('express-ejs-layouts');
@@ -52,11 +51,6 @@ app.use(bodyParser.json());
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'campus-lost-found-secret',
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI,
-      collectionName: 'sessions',
-      ttl: 60 * 60 * 24 * 14,
-    }),
     resave: false,
     saveUninitialized: false,
     cookie: {

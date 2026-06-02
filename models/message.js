@@ -1,32 +1,34 @@
-const { mongoose } = require('../db');
+const { db } = require('../db');
+const { nanoid } = require('nanoid');
 
-const messageSchema = new mongoose.Schema(
-  {
-    senderId: { type: String, required: true },
-    senderName: { type: String, required: true },
-    recipientId: { type: String, required: true },
-    recipientName: { type: String, required: true },
-    content: { type: String, required: true },
-    readByRecipient: { type: Boolean, default: false },
-  },
-  { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } }
-);
-
-const Message = mongoose.models.Message || mongoose.model('Message', messageSchema);
+function getNextMessageId() {
+  const messages = db.data?.messages || [];
+  if (!messages.length) return 1;
+  return Math.max(...messages.map((m) => parseInt(m.id) || 0)) + 1;
+}
 
 exports.createMessage = async (msg) => {
-  const newMessage = await Message.create({
+  await db.read();
+  db.data = db.data || { users: [], items: [], messages: [] };
+
+  const id = String(getNextMessageId());
+  const newMessage = {
+    id,
     ...msg,
     readByRecipient: false,
-  });
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  db.data.messages.push(newMessage);
+  await db.write();
   return newMessage;
 };
 
 exports.getConversations = async (userId) => {
+  await db.read();
+  const messages = db.data?.messages || [];
   const uId = String(userId);
-  const messages = await Message.find({
-    $or: [{ senderId: uId }, { recipientId: uId }],
-  }).sort({ createdAt: -1 });
 
   const conversationMap = new Map();
 
@@ -36,7 +38,7 @@ exports.getConversations = async (userId) => {
 
     const otherId = sId === uId ? rId : sId;
     const otherName = sId === uId ? m.recipientName : m.senderName;
-    const isUnreadForUser = rId === uId && sId === otherId && m.readByRecipient !== true;
+    const isUnreadForUser = rId === uId && m.readByRecipient !== true;
 
     if (!conversationMap.has(otherId)) {
       conversationMap.set(otherId, {
@@ -65,33 +67,42 @@ exports.getConversations = async (userId) => {
 };
 
 exports.getMessages = async (userId, otherId) => {
+  await db.read();
+  const messages = db.data?.messages || [];
   const uId = String(userId);
   const oId = String(otherId);
 
-  return Message.find({
-    $or: [
-      { senderId: uId, recipientId: oId },
-      { senderId: oId, recipientId: uId },
-    ],
-  }).sort({ createdAt: 1 });
+  return messages
+    .filter(
+      (m) =>
+        (String(m.senderId) === uId && String(m.recipientId) === oId) ||
+        (String(m.senderId) === oId && String(m.recipientId) === uId)
+    )
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 };
 
 exports.markConversationRead = async (userId, otherId) => {
+  await db.read();
+  const messages = db.data?.messages || [];
   const uId = String(userId);
   const oId = String(otherId);
 
-  await Message.updateMany(
-    { senderId: oId, recipientId: uId, readByRecipient: { $ne: true } },
-    { $set: { readByRecipient: true } }
-  );
+  messages.forEach((m) => {
+    if (String(m.senderId) === oId && String(m.recipientId) === uId) {
+      m.readByRecipient = true;
+      m.updatedAt = new Date().toISOString();
+    }
+  });
+
+  await db.write();
 };
 
 exports.getUnreadCount = async (userId) => {
+  await db.read();
+  const messages = db.data?.messages || [];
   const uId = String(userId);
-  return Message.countDocuments({
-    recipientId: uId,
-    readByRecipient: { $ne: true },
-  });
-};
 
-exports.Message = Message;
+  return messages.filter(
+    (m) => String(m.recipientId) === uId && m.readByRecipient !== true
+  ).length;
+};

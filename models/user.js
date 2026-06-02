@@ -1,30 +1,34 @@
 const bcrypt = require('bcryptjs');
-const { mongoose } = require('../db');
+const { db } = require('../db');
 
 const SALT_ROUNDS = 12;
 
-const userSchema = new mongoose.Schema(
-  {
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    studentId: { type: String, trim: true },
-    name: { type: String, required: true, trim: true },
-    passwordHash: { type: String, required: true },
-    role: { type: String, default: 'user' },
-  },
-  { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } }
-);
-
-const User = mongoose.models.User || mongoose.model('User', userSchema);
+function getNextUserId() {
+  const users = db.data?.users || [];
+  if (!users.length) return 1;
+  return Math.max(...users.map((u) => parseInt(u.id) || 0)) + 1;
+}
 
 async function createUser({ email, studentId, name, password, role = 'user' }) {
+  await db.read();
+  db.data = db.data || { users: [], items: [], messages: [] };
+
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  const user = await User.create({
+  const id = String(getNextUserId());
+
+  const user = {
+    id,
     email: (email || '').toLowerCase().trim(),
     studentId,
     name,
     passwordHash,
     role,
-  });
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  db.data.users.push(user);
+  await db.write();
 
   return {
     id: user.id,
@@ -37,12 +41,16 @@ async function createUser({ email, studentId, name, password, role = 'user' }) {
 
 async function findByEmail(email) {
   if (!email) return null;
-  return User.findOne({ email: email.toLowerCase().trim() });
+  await db.read();
+  const users = db.data?.users || [];
+  return users.find((u) => u.email === email.toLowerCase().trim());
 }
 
 async function findById(id) {
-  if (!id || !mongoose.Types.ObjectId.isValid(String(id))) return null;
-  return User.findById(id);
+  if (!id) return null;
+  await db.read();
+  const users = db.data?.users || [];
+  return users.find((u) => String(u.id) === String(id));
 }
 
 async function verifyPassword(user, password) {
@@ -55,5 +63,4 @@ module.exports = {
   findByEmail,
   findById,
   verifyPassword,
-  User,
 };

@@ -1,13 +1,14 @@
-const { Item } = require('./item');
-const { User } = require('./user');
-const { Message } = require('./message');
+const { db } = require('../db');
 
 async function getAdminOverview() {
-  const totalUsers = await User.countDocuments();
-  const totalItems = await Item.countDocuments();
-  const totalMessages = await Message.countDocuments();
+  await db.read();
+  const users = db.data?.users || [];
+  const items = db.data?.items || [];
+  const messages = db.data?.messages || [];
 
-  const items = await Item.find();
+  const totalUsers = users.length;
+  const totalItems = items.length;
+  const totalMessages = messages.length;
 
   let totalClaims = 0;
   let pendingClaims = 0;
@@ -40,11 +41,21 @@ async function getAdminOverview() {
 }
 
 async function getRecentReports(limit = 8) {
-  return Item.find().sort({ createdAt: -1 }).limit(limit);
+  await db.read();
+  const items = db.data?.items || [];
+  return items
+    .slice()
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, limit);
 }
 
 async function getRecentUsers(limit = 6) {
-  return User.find().sort({ createdAt: -1 }).limit(limit);
+  await db.read();
+  const users = db.data?.users || [];
+  return users
+    .slice()
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, limit);
 }
 
 function buildClaimEntries(items, filterFn) {
@@ -68,21 +79,24 @@ function buildClaimEntries(items, filterFn) {
 }
 
 async function getRecentClaims(limit = 10) {
-  const items = await Item.find();
+  await db.read();
+  const items = db.data?.items || [];
   return buildClaimEntries(items)
     .sort((a, b) => new Date(b.claim.createdAt) - new Date(a.claim.createdAt))
     .slice(0, limit);
 }
 
 async function getPendingClaims(limit = 10) {
-  const items = await Item.find();
+  await db.read();
+  const items = db.data?.items || [];
   return buildClaimEntries(items, (claim) => claim.status === 'pending')
     .sort((a, b) => new Date(b.claim.createdAt) - new Date(a.claim.createdAt))
     .slice(0, limit);
 }
 
 async function getItemsWithMultipleClaims(limit = 6) {
-  const items = await Item.find();
+  await db.read();
+  const items = db.data?.items || [];
   const multi = items
     .filter((item) => (item.claims || []).length > 1)
     .map((item) => {
