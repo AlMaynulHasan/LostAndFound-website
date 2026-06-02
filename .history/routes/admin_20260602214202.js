@@ -28,7 +28,6 @@ router.get('/', requireLogin, requireAdmin, async (req, res) => {
     const recentClaims = await adminModel.getRecentClaims(10);
     const pendingClaims = await adminModel.getPendingClaims(8);
     const multiClaimItems = await adminModel.getItemsWithMultipleClaims(6);
-    const pendingVerifications = await itemModel.getPendingReturnVerifications();
 
     res.render('admin', {
       title: 'Admin Dashboard',
@@ -38,7 +37,6 @@ router.get('/', requireLogin, requireAdmin, async (req, res) => {
       recentClaims,
       pendingClaims,
       multiClaimItems,
-      pendingVerifications,
     });
   } catch (err) {
     console.error('Admin dashboard error:', err);

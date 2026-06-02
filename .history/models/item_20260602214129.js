@@ -142,9 +142,7 @@ async function updateClaimStatus(itemId, claimId, status) {
   }
 
   if (status === 'accepted') {
-    // Keep item status as 'reported' to allow multiple users to claim
-    // Item will only change to 'resolved' when admin verifies the return
-    item.status = 'reported';
+    item.status = 'pending_return';
     item.updatedAt = new Date().toISOString();
   } else if (status === 'denied') {
     const hasPending = item.claims.some((c) => c.status === 'pending');
@@ -384,32 +382,6 @@ async function markItemReturned(itemId, claimId) {
   return { claim, item };
 }
 
-async function getPendingReturnVerifications() {
-  await db.read();
-  const items = db.data?.items || [];
-  const pendingVerifications = [];
-
-  items.forEach((item) => {
-    (item.claims || [])
-      .filter((claim) => claim.status === 'accepted')
-      .forEach((claim) => {
-        pendingVerifications.push({
-          itemId: item.id,
-          itemName: item.name,
-          itemType: item.type,
-          claimantName: claim.claimantName,
-          ownerName: item.reportedByName,
-          verificationCode: claim.verificationCode,
-          returnLocation: item.returnInfo,
-          contactMethod: item.contactMethod,
-          acceptedAt: claim.acceptedAt,
-          claim,
-        });
-      });
-  });
-  return pendingVerifications.sort((a, b) => new Date(b.acceptedAt) - new Date(a.acceptedAt));
-}
-
 module.exports = {
   createItem,
   findRecentItems,
@@ -433,6 +405,4 @@ module.exports = {
   requestClaimReturn,
   confirmClaimReturn,
   markReturnReminderSent,
-  markItemReturned,
-  getPendingReturnVerifications,
 };

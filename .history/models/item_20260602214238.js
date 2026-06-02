@@ -142,9 +142,7 @@ async function updateClaimStatus(itemId, claimId, status) {
   }
 
   if (status === 'accepted') {
-    // Keep item status as 'reported' to allow multiple users to claim
-    // Item will only change to 'resolved' when admin verifies the return
-    item.status = 'reported';
+    item.status = 'pending_return';
     item.updatedAt = new Date().toISOString();
   } else if (status === 'denied') {
     const hasPending = item.claims.some((c) => c.status === 'pending');
@@ -434,5 +432,4 @@ module.exports = {
   confirmClaimReturn,
   markReturnReminderSent,
   markItemReturned,
-  getPendingReturnVerifications,
 };

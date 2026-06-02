@@ -157,14 +157,14 @@ router.get('/search', async (req, res) => {
     category,
     location,
     type,
-    status: status || 'reported',
+    status,
     date,
     sort: sort || 'newest',
   });
   res.render('search', {
     title: 'Search Items',
     items,
-    filters: { q, category, location, type, status: status || 'reported', sort: sort || 'newest', date },
+    filters: { q, category, location, type, status, sort: sort || 'newest', date },
   });
 });
 
@@ -175,14 +175,14 @@ router.get('/lost', async (req, res) => {
     category,
     location,
     type: 'lost',
-    status: status || 'reported',
+    status,
     date,
     sort: sort || 'newest',
   });
   res.render('lost', {
     title: 'Lost Items',
     items,
-    filters: { q, category, location, type: 'lost', status: status || 'reported', sort: sort || 'newest', date },
+    filters: { q, category, location, type: 'lost', status, sort: sort || 'newest', date },
   });
 });
 
@@ -193,14 +193,14 @@ router.get('/found', async (req, res) => {
     category,
     location,
     type: 'found',
-    status: status || 'reported',
+    status,
     date,
     sort: sort || 'newest',
   });
   res.render('found', {
     title: 'Found Items',
     items,
-    filters: { q, category, location, type: 'found', status: status || 'reported', sort: sort || 'newest', date },
+    filters: { q, category, location, type: 'found', status, sort: sort || 'newest', date },
   });
 });
 
@@ -359,53 +359,18 @@ router.post('/:id/claim/:claimId/accept', requireLogin, async (req, res) => {
   await itemModel.updateClaimStatus(item.id, req.params.claimId, 'accepted');
   const claim = (item.claims || []).find((c) => String(c.id) === String(req.params.claimId));
   if (claim) {
-    const returnInfo = item.returnInfo || '(not specified)';
-    const returnBy = item.returnBy || item.reportedByName || 'Reporter';
-    const contactMethod = item.contactMethod || '(not specified)';
-    const verificationCode = claim.verificationCode || 'N/A';
-    
-    // Message to claimant with verification code
-    const messageTextToClaimant = `Your claim for "${item.name}" was accepted. Return location: ${returnInfo}. Handled by: ${returnBy}. Contact: ${contactMethod}. Verification Code: ${verificationCode}. If this is not yours, request a return within 72 hours and return the item within 5 days.`;
-    
+    const returnInfo = item.returnInfo ? `Return location: ${item.returnInfo}` : 'Return location: (not specified)';
+    const returnBy = item.returnBy ? `Handled by: ${item.returnBy}` : `Handled by: ${item.reportedByName || 'Reporter'}`;
+    const messageText = `Your claim for "${item.name}" was accepted. ${returnInfo}. ${returnBy}. If this is not yours, request a return within 72 hours and return the item within 5 days.`;
     await messageModel.createMessage({
       senderId: req.session.user.id,
       senderName: req.session.user.name,
       recipientId: claim.claimantId,
       recipientName: claim.claimantName,
-      content: messageTextToClaimant,
+      content: messageText,
     });
-
-    // Message to reporter/owner about who will return the item
-    const messageTextToReporter = `Your item "${item.name}" claim was accepted by ${claim.claimantName}. Returning person: ${claim.claimantName}. Return location: ${returnInfo}. Contact: ${contactMethod}. Verification Code: ${verificationCode}. Please verify the returning person using this code.`;
-    
-    await messageModel.createMessage({
-      senderId: req.session.user.id,
-      senderName: req.session.user.name,
-      recipientId: item.userId,
-      recipientName: item.reportedByName,
-      content: messageTextToReporter,
-    });
-
-    // Send notification to admin
-    const adminUsers = await (async () => {
-      const db = require('../db').db;
-      await db.read();
-      return (db.data?.users || []).filter(u => u.role === 'admin');
-    })();
-
-    for (const adminUser of adminUsers) {
-      const adminMessage = `[ADMIN VERIFICATION] Item: "${item.name}" | Returning Person: ${claim.claimantName} | Owner: ${item.reportedByName} | Location: ${returnInfo} | Contact: ${contactMethod} | Verification Code: ${verificationCode}. Please verify and mark as returned when complete.`;
-      
-      await messageModel.createMessage({
-        senderId: req.session.user.id,
-        senderName: req.session.user.name,
-        recipientId: adminUser.id,
-        recipientName: adminUser.name,
-        content: adminMessage,
-      });
-    }
   }
-  req.flash('success', 'Claim accepted. Verification code sent to all parties.');
+  req.flash('success', 'Claim accepted. The item has been marked as returned.');
   res.redirect('/dashboard');
 });
 
