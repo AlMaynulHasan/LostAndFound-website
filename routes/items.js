@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const itemModel = require('../models/item');
 const messageModel = require('../models/message');
+const mailer = require('../services/mailer');
 const { getFeaturedItem } = require('../data/featured-items');
 
 const router = express.Router();
@@ -97,6 +98,7 @@ router.post('/report', requireLogin, upload.single('photo'), async (req, res) =>
     name,
     description,
     location,
+    locationDetails,
     dateLost,
     category,
     contactMethod,
@@ -118,8 +120,8 @@ router.post('/report', requireLogin, upload.single('photo'), async (req, res) =>
   ].filter((entry) => entry.question && entry.answer);
 
   try {
-    if (verificationQuestions.length < 2) {
-      req.flash('error', 'Please provide at least two verification questions with answers.');
+    if (verificationQuestions.length < 3) {
+      req.flash('error', 'Please provide all 3 verification questions with answers.');
       return res.redirect('/items/report');
     }
 
@@ -129,6 +131,7 @@ router.post('/report', requireLogin, upload.single('photo'), async (req, res) =>
       name,
       description,
       location,
+      locationDetails: (locationDetails || '').trim(),
       dateLost,
       category,
       contactMethod,
@@ -341,6 +344,17 @@ router.post('/:id/claim', requireLogin, upload.single('proof'), async (req, res)
     createdAt: new Date().toISOString(),
   });
 
+  // Send email notification to item owner
+  if (item.ownerEmail) {
+    const dashboardLink = process.env.APP_URL ? `${process.env.APP_URL}/dashboard` : 'http://localhost:3000/dashboard';
+    await mailer.sendClaimNotification(
+      item.ownerEmail,
+      item.name,
+      req.session.user.name,
+      dashboardLink
+    );
+  }
+
   req.flash('success', 'Claim request sent. The reporter will review it.');
   res.redirect(`/items/${item.id}`);
 });
@@ -348,7 +362,15 @@ router.post('/:id/claim', requireLogin, upload.single('proof'), async (req, res)
 router.post('/:id/claim/:claimId/accept', requireLogin, async (req, res) => {
   const item = await itemModel.findById(req.params.id);
   if (!item) return res.status(404).render('404', { title: 'Not Found' });
+// Send email notification to claimant
+    if (claim.claimantEmail) {
+      await mailer.sendClaimAcceptedNotification(
+        claim.claimantEmail,
+        item.name
+      );
+    }
 
+    
   const isOwner = String(item.userId) === String(req.session.user.id);
   const isAdmin = req.session.user && req.session.user.role === 'admin';
   if (!isOwner && !isAdmin) {
@@ -402,6 +424,16 @@ router.post('/:id/claim/:claimId/accept', requireLogin, async (req, res) => {
         recipientId: adminUser.id,
         recipientName: adminUser.name,
         content: adminMessage,
+  
+  // Get claim details to send email
+  const claim = (item.claims || []).find((c) => String(c.id) === String(req.params.claimId));
+  if (claim && claim.claimantEmail) {
+    await mailer.sendClaimDeniedNotification(
+      claim.claimantEmail,
+      item.name
+    );
+  }
+  
       });
     }
   }

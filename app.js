@@ -12,6 +12,9 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const flash = require('connect-flash');
 const expressLayouts = require('express-ejs-layouts');
+const helmet = require('helmet');
+const csrf = require('csurf');
+const rateLimit = require('express-rate-limit');
 
 const { init } = require('./db');
 const authRoutes = require('./routes/auth');
@@ -22,6 +25,10 @@ const dashboardRoutes = require('./routes/dashboard');
 const adminRoutes = require('./routes/admin');
 const messageModel = require('./models/message');
 const itemModel = require('./models/item');
+const { initCronJobs } = require('./services/cronJobs');
+
+// Initialize cron jobs for auto-delete reminders
+initCronJobs();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +51,25 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('layout', 'layout');
 app.use(expressLayouts);
 
+// Security middleware
+app.use(helmet());
+
+// Rate limiting middleware
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // stricter limit for auth routes
+  message: 'Too many login/registration attempts, please try again later.',
+  skipSuccessfulRequests: true,
+});
+
+app.use(globalLimiter);
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -61,6 +87,10 @@ app.use(
     },
   })
 );
+
+// CSRF protection middleware
+const csrfProtection = csrf({ cookie: false });
+app.use(csrfProtection);
 
 app.use(flash());
 
@@ -103,12 +133,37 @@ app.use((req, res, next) => {
 });
 
 const shouldLogChat = process.env.NODE_ENV !== 'production';
-const logChat = (...args) => {
-  if (shouldLogChat) console.log(...args);
-};
+// Health check route
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
+// Make CSRF token available to views
+app.use((req, res, next) => {
+  res.locals.csrfToken = req.csrfToken ? req.csrfToken() : '';
+  next();
+});
+
+// Apply stricter rate limiting to auth routes
+app.use('/auth/register', authLimiter);
+app.use('/auth/login', authLimiter);
 
 app.use('/', indexRoutes);
 app.use('/auth', authRoutes);
+app.use('/items', itemRoutes);
+app.use('/chat', chatRoutes);
+app.use('/dashboard', dashboardRoutes);
+app.use('/admin', adminRoutes);
+
+// CSRF error handler
+app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    // CSRF token errors should result in a 403 Forbidden
+    res.status(403).render('403', { title: 'Forbidden', message: 'Invalid CSRF token' });
+  } else {
+    next(err);
+  }
+}
 app.use('/items', itemRoutes);
 app.use('/chat', chatRoutes);
 app.use('/dashboard', dashboardRoutes);

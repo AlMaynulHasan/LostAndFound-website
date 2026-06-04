@@ -16,8 +16,16 @@
             <input type="email" name="email" class="form-control" required />
           </div>
           <div class="mb-3">
-            <label class="form-label">Student ID (optional)</label>
-            <input type="text" name="studentId" class="form-control" />
+            <label class="form-label">Student ID</label>
+            <input 
+              type="text" 
+              name="studentId" 
+              class="form-control" 
+              pattern="[0-9]{16}" 
+              placeholder="16-digit student ID (e.g., 0802420205101025)"
+              required 
+            />
+            <small class="form-text text-muted">Format: 16 digits (VVV + YY + S + HH + DDDD + RRRR)</small>
           </div>
           <div class="row gx-3">
             <div class="col-md-6 mb-3">

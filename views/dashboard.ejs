@@ -308,7 +308,14 @@
                     </div>
                   </div>
                   <div class="card-footer bg-white">
-                    <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                    <div class="d-flex gap-2">
+                      <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm flex-grow-1">View Details</a>
+                      <% if (item.status !== 'resolved') { %>
+                        <form method="post" action="/dashboard/<%= item.id %>/mark-returned" style="width: auto;">
+                          <button type="submit" class="btn btn-success btn-sm" title="Mark as Returned">✓</button>
+                        </form>
+                      <% } %>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -348,7 +355,14 @@
                     </div>
                   </div>
                   <div class="card-footer bg-white">
-                    <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                    <div class="d-flex gap-2">
+                      <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm flex-grow-1">View Details</a>
+                      <% if (item.status !== 'resolved') { %>
+                        <form method="post" action="/dashboard/<%= item.id %>/mark-returned" style="width: auto;">
+                          <button type="submit" class="btn btn-success btn-sm" title="Mark as Returned">✓</button>
+                        </form>
+                      <% } %>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -387,7 +401,14 @@
                     </div>
                   </div>
                   <div class="card-footer bg-white">
-                    <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                    <div class="d-flex gap-2">
+                      <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm flex-grow-1">View Details</a>
+                      <% if (item.status !== 'resolved') { %>
+                        <form method="post" action="/dashboard/<%= item.id %>/mark-returned" style="width: auto;">
+                          <button type="submit" class="btn btn-success btn-sm" title="Mark as Returned">✓</button>
+                        </form>
+                      <% } %>
+                    </div>
                   </div>
                 </div>
               </div>

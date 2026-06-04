@@ -81,4 +81,31 @@ router.get('/', requireLogin, async (req, res) => {
   });
 });
 
+// Mark an item as returned/resolved
+router.post('/:itemId/mark-returned', requireLogin, async (req, res) => {
+  try {
+    const item = await itemModel.findById(req.params.itemId);
+    if (!item) {
+      req.flash('error', 'Item not found');
+      return res.redirect('/dashboard');
+    }
+
+    // Only the item owner can mark it as returned
+    if (String(item.userId) !== String(req.session.user.id)) {
+      req.flash('error', 'You do not have permission to mark this item as returned');
+      return res.redirect('/dashboard');
+    }
+
+    // Update item status to resolved
+    await itemModel.updateItemStatus(item.id, 'resolved');
+
+    req.flash('success', `Item "${item.name}" marked as returned`);
+    res.redirect('/dashboard');
+  } catch (error) {
+    console.error('Error marking item as returned:', error);
+    req.flash('error', 'Failed to mark item as returned');
+    res.redirect('/dashboard');
+  }
+});
+
 module.exports = router;

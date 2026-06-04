@@ -37,16 +37,32 @@
       </select>
     </div>
     <div class="col-md-2">
-      <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
-        <input
-          type="text"
-          name="location"
-          value="<%= filters.location || '' %>"
-          class="form-control"
-          placeholder="Location"
-        />
-      </div>
+      <select name="location" class="form-select">
+        <option value="">All locations</option>
+        <option value="Main Library" <%= filters.location === 'Main Library' ? 'selected' : '' %>>Main Library</option>
+        <option value="Cafeteria" <%= filters.location === 'Cafeteria' ? 'selected' : '' %>>Cafeteria</option>
+        <option value="Admin Block" <%= filters.location === 'Admin Block' ? 'selected' : '' %>>Admin Block</option>
+        <option value="Department of CSE" <%= filters.location === 'Department of CSE' ? 'selected' : '' %>>Department of CSE</option>
+        <option value="Department of ME" <%= filters.location === 'Department of ME' ? 'selected' : '' %>>Department of ME</option>
+        <option value="Department of IPE" <%= filters.location === 'Department of IPE' ? 'selected' : '' %>>Department of IPE</option>
+        <option value="Department of EEE" <%= filters.location === 'Department of EEE' ? 'selected' : '' %>>Department of EEE</option>
+        <option value="Department of ICT" <%= filters.location === 'Department of ICT' ? 'selected' : '' %>>Department of ICT</option>
+        <option value="Department of Civil" <%= filters.location === 'Department of Civil' ? 'selected' : '' %>>Department of Civil</option>
+        <option value="Department of AIS" <%= filters.location === 'Department of AIS' ? 'selected' : '' %>>Department of AIS</option>
+        <option value="Department of English" <%= filters.location === 'Department of English' ? 'selected' : '' %>>Department of English</option>
+        <option value="Department of BBA" <%= filters.location === 'Department of BBA' ? 'selected' : '' %>>Department of BBA</option>
+        <option value="Abbas Uddin Ahmed Hall" <%= filters.location === 'Abbas Uddin Ahmed Hall' ? 'selected' : '' %>>Abbas Uddin Ahmed Hall</option>
+        <option value="Zikrul Haque Hall" <%= filters.location === 'Zikrul Haque Hall' ? 'selected' : '' %>>Zikrul Haque Hall</option>
+        <option value="Taramon Bibi Hall" <%= filters.location === 'Taramon Bibi Hall' ? 'selected' : '' %>>Taramon Bibi Hall</option>
+        <option value="Annex" <%= filters.location === 'Annex' ? 'selected' : '' %>>Annex</option>
+        <option value="Central Field" <%= filters.location === 'Central Field' ? 'selected' : '' %>>Central Field</option>
+        <option value="Seminal Hall" <%= filters.location === 'Seminal Hall' ? 'selected' : '' %>>Seminal Hall</option>
+        <option value="Medical Center" <%= filters.location === 'Medical Center' ? 'selected' : '' %>>Medical Center</option>
+        <option value="Parking Area" <%= filters.location === 'Parking Area' ? 'selected' : '' %>>Parking Area</option>
+        <option value="Main Gate" <%= filters.location === 'Main Gate' ? 'selected' : '' %>>Main Gate</option>
+        <option value="Sailar mor" <%= filters.location === 'Sailar mor' ? 'selected' : '' %>>Sailar mor</option>
+        <option value="Other" <%= filters.location === 'Other' ? 'selected' : '' %>>Other</option>
+      </select>
     </div>
     <div class="col-md-2">
       <select name="type" class="form-select">

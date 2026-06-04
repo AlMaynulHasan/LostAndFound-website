@@ -40,6 +40,35 @@
 
     <%- include('partials/footer') %>
 
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-nav d-lg-none">
+      <div class="mobile-nav-container">
+        <a href="/" class="mobile-nav-item<%= currentPath === '/' ? ' active' : '' %>">
+          <i class="bi bi-house-fill"></i>
+          <span>Home</span>
+        </a>
+        <a href="/items/search" class="mobile-nav-item<%= currentPath.includes('/search') ? ' active' : '' %>">
+          <i class="bi bi-search"></i>
+          <span>Search</span>
+        </a>
+        <a href="/items/report" class="mobile-nav-item<%= currentPath.includes('/report') ? ' active' : '' %>">
+          <i class="bi bi-plus-circle-fill"></i>
+          <span>Report</span>
+        </a>
+        <% if (currentUser) { %>
+          <a href="/dashboard" class="mobile-nav-item<%= currentPath.includes('/dashboard') ? ' active' : '' %>">
+            <i class="bi bi-person-circle"></i>
+            <span>Dashboard</span>
+          </a>
+        <% } else { %>
+          <a href="/auth/login" class="mobile-nav-item">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <span>Login</span>
+          </a>
+        <% } %>
+      </div>
+    </nav>
+
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
       integrity="sha384-..."

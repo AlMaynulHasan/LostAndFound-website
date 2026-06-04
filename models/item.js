@@ -1,4 +1,9 @@
 const { db } = require('../db');
+const xss = require('xss');
+
+function sanitize(str) {
+  return xss(String(str || '')).trim();
+}
 
 function getNextId(list) {
   if (!list.length) return 1;
@@ -10,9 +15,20 @@ async function createItem(item) {
   db.data = db.data || { users: [], items: [] };
 
   const id = getNextId(db.data.items);
+  
+  // Sanitize user input to prevent XSS
+  const sanitizedItem = {
+    ...item,
+    title: sanitize(item.title || item.name),
+    name: sanitize(item.name),
+    description: sanitize(item.description),
+    location: sanitize(item.location),
+    category: sanitize(item.category),
+  };
+  
   const record = {
     id,
-    ...item,
+    ...sanitizedItem,
     createdAt: new Date().toISOString(),
   };
 
@@ -90,7 +106,12 @@ async function findByUserId(userId, options = {}) {
   }
   return items
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, limit);
+ 
+
+// Alias for updateStatus
+async function updateItemStatus(id, status) {
+  return updateStatus(id, status);
+}   .slice(0, limit);
 }
 
 async function updateStatus(id, status) {
@@ -412,6 +433,7 @@ async function getPendingReturnVerifications() {
 
 module.exports = {
   createItem,
+  updateItemStatus,
   findRecentItems,
   findById,
   searchItems,

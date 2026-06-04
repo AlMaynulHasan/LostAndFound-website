@@ -57,12 +57,32 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Location</label>
-              <input
-                type="text"
-                name="location"
-                class="form-control"
-                required
-              />
+              <select name="location" class="form-select" required>
+                <option value="">-- Select a location --</option>
+                <option value="Main Library">Main Library</option>
+                <option value="Cafeteria">Cafeteria</option>
+                <option value="Admin Block">Admin Block</option>
+                <option value="Department of CSE">Department of CSE</option>
+                <option value="Department of ME">Department of ME</option>
+                <option value="Department of IPE">Department of IPE</option>
+                <option value="Department of EEE">Department of EEE</option>
+                <option value="Department of ICT">Department of ICT</option>
+                <option value="Department of Civil">Department of Civil</option>
+                <option value="Department of AIS">Department of AIS</option>
+                <option value="Department of English">Department of English</option>
+                <option value="Department of BBA">Department of BBA</option>
+                <option value="Abbas Uddin Ahmed Hall">Abbas Uddin Ahmed Hall</option>
+                <option value="Zikrul Haque Hall">Zikrul Haque Hall</option>
+                <option value="Taramon Bibi Hall">Taramon Bibi Hall</option>
+                <option value="Annex">Annex</option>
+                <option value="Central Field">Central Field</option>
+                <option value="Seminal Hall">Seminal Hall</option>
+                <option value="Medical Center">Medical Center</option>
+                <option value="Parking Area">Parking Area</option>
+                <option value="Main Gate">Main Gate</option>
+                <option value="Sailar mor">Sailar mor</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
             <div class="col-md-6">
               <label class="form-label">Date lost/found</label>
@@ -73,6 +93,16 @@
                 required
               />
             </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Specific Location Details <span class="text-muted">(e.g., Room 402, 3rd bench)</span></label>
+            <input
+              type="text"
+              name="locationDetails"
+              class="form-control"
+              placeholder="Additional details about where the item was lost/found"
+            />
           </div>
 
           <div class="row g-3 mt-1">
@@ -135,16 +165,42 @@
           </div>
 
           <div class="mt-4">
-            <h6 class="mb-2">Verification question</h6>
-            <p class="text-muted small mb-3">Add one question with the expected answer so claimants can prove ownership.</p>
-            <div class="row g-3">
+            <h6 class="mb-2">Verification questions</h6>
+            <p class="text-muted small mb-3">Add 3 questions with expected answers so claimants can prove ownership.</p>
+            
+            <!-- Question 1 -->
+            <div class="row g-3 mb-3">
               <div class="col-12">
-                <label class="form-label">Question</label>
+                <label class="form-label">Question 1</label>
                 <input type="text" name="verifyQuestion1" class="form-control" placeholder="e.g., What sticker is on the back?" required />
               </div>
               <div class="col-12">
                 <label class="form-label">Expected answer</label>
                 <input type="text" name="verifyAnswer1" class="form-control" placeholder="e.g., Blue star" required />
+              </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="row g-3 mb-3">
+              <div class="col-12">
+                <label class="form-label">Question 2</label>
+                <input type="text" name="verifyQuestion2" class="form-control" placeholder="e.g., What brand is it?" required />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Expected answer</label>
+                <input type="text" name="verifyAnswer2" class="form-control" placeholder="e.g., Samsung" required />
+              </div>
+            </div>
+
+            <!-- Question 3 -->
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Question 3</label>
+                <input type="text" name="verifyQuestion3" class="form-control" placeholder="e.g., What's the color?" required />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Expected answer</label>
+                <input type="text" name="verifyAnswer3" class="form-control" placeholder="e.g., Black" required />
               </div>
             </div>
           </div>
