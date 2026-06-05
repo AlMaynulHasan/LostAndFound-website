@@ -127,6 +127,7 @@ router.post('/report', requireLogin, upload.single('photo'), async (req, res) =>
 
     await itemModel.createItem({
       userId: req.session.user.id,
+      ownerEmail: req.session.user.email,
       type,
       name,
       description,
@@ -335,6 +336,7 @@ router.post('/:id/claim', requireLogin, upload.single('proof'), async (req, res)
     id: Date.now().toString(),
     claimantId: req.session.user.id,
     claimantName: req.session.user.name,
+    claimantEmail: req.session.user.email,
     description,
     claimedDate: claimedDate || null,
     proofPath,
@@ -362,15 +364,7 @@ router.post('/:id/claim', requireLogin, upload.single('proof'), async (req, res)
 router.post('/:id/claim/:claimId/accept', requireLogin, async (req, res) => {
   const item = await itemModel.findById(req.params.id);
   if (!item) return res.status(404).render('404', { title: 'Not Found' });
-// Send email notification to claimant
-    if (claim.claimantEmail) {
-      await mailer.sendClaimAcceptedNotification(
-        claim.claimantEmail,
-        item.name
-      );
-    }
 
-    
   const isOwner = String(item.userId) === String(req.session.user.id);
   const isAdmin = req.session.user && req.session.user.role === 'admin';
   if (!isOwner && !isAdmin) {
@@ -378,65 +372,50 @@ router.post('/:id/claim/:claimId/accept', requireLogin, async (req, res) => {
     return res.redirect('/dashboard');
   }
 
-  await itemModel.updateClaimStatus(item.id, req.params.claimId, 'accepted');
-  const claim = (item.claims || []).find((c) => String(c.id) === String(req.params.claimId));
-  if (claim) {
-    const returnInfo = item.returnInfo || '(not specified)';
-    const returnBy = item.returnBy || item.reportedByName || 'Reporter';
-    const contactMethod = item.contactMethod || '(not specified)';
-    const verificationCode = claim.verificationCode || 'N/A';
-    
-    // Message to claimant with verification code
-    const messageTextToClaimant = `Your claim for "${item.name}" was accepted. Return location: ${returnInfo}. Handled by: ${returnBy}. Contact: ${contactMethod}. Verification Code: ${verificationCode}. If this is not yours, request a return within 72 hours and return the item within 5 days.`;
-    
+  const claim = await itemModel.updateClaimStatus(item.id, req.params.claimId, 'accepted');
+  if (!claim) {
+    req.flash('error', 'Claim not found.');
+    return res.redirect('/dashboard');
+  }
+
+  const returnInfo = item.returnInfo || '(not specified)';
+  const returnBy = item.returnBy || item.reportedByName || 'Reporter';
+  const contactMethod = item.contactMethod || '(not specified)';
+  const verificationCode = claim.verificationCode || 'N/A';
+
+  await messageModel.createMessage({
+    senderId: req.session.user.id,
+    senderName: req.session.user.name,
+    recipientId: claim.claimantId,
+    recipientName: claim.claimantName,
+    content: `Your claim for "${item.name}" was accepted. Return location: ${returnInfo}. Handled by: ${returnBy}. Contact: ${contactMethod}. Verification Code: ${verificationCode}. Please pick up the item within 72 hours.`,
+  });
+
+  await messageModel.createMessage({
+    senderId: req.session.user.id,
+    senderName: req.session.user.name,
+    recipientId: item.userId,
+    recipientName: item.reportedByName,
+    content: `Claim accepted for "${item.name}" by ${claim.claimantName}. Verification Code: ${verificationCode}.`,
+  });
+
+  const { db } = require('../db');
+  await db.read();
+  const adminUsers = (db.data?.users || []).filter((u) => u.role === 'admin');
+  for (const adminUser of adminUsers) {
     await messageModel.createMessage({
       senderId: req.session.user.id,
       senderName: req.session.user.name,
-      recipientId: claim.claimantId,
-      recipientName: claim.claimantName,
-      content: messageTextToClaimant,
+      recipientId: adminUser.id,
+      recipientName: adminUser.name,
+      content: `[ADMIN VERIFICATION] Item: "${item.name}" | Returning Person: ${claim.claimantName} | Owner: ${item.reportedByName} | Location: ${returnInfo} | Contact: ${contactMethod} | Verification Code: ${verificationCode}.`,
     });
-
-    // Message to reporter/owner about who will return the item
-    const messageTextToReporter = `Your item "${item.name}" claim was accepted by ${claim.claimantName}. Returning person: ${claim.claimantName}. Return location: ${returnInfo}. Contact: ${contactMethod}. Verification Code: ${verificationCode}. Please verify the returning person using this code.`;
-    
-    await messageModel.createMessage({
-      senderId: req.session.user.id,
-      senderName: req.session.user.name,
-      recipientId: item.userId,
-      recipientName: item.reportedByName,
-      content: messageTextToReporter,
-    });
-
-    // Send notification to admin
-    const adminUsers = await (async () => {
-      const db = require('../db').db;
-      await db.read();
-      return (db.data?.users || []).filter(u => u.role === 'admin');
-    })();
-
-    for (const adminUser of adminUsers) {
-      const adminMessage = `[ADMIN VERIFICATION] Item: "${item.name}" | Returning Person: ${claim.claimantName} | Owner: ${item.reportedByName} | Location: ${returnInfo} | Contact: ${contactMethod} | Verification Code: ${verificationCode}. Please verify and mark as returned when complete.`;
-      
-      await messageModel.createMessage({
-        senderId: req.session.user.id,
-        senderName: req.session.user.name,
-        recipientId: adminUser.id,
-        recipientName: adminUser.name,
-        content: adminMessage,
-  
-  // Get claim details to send email
-  const claim = (item.claims || []).find((c) => String(c.id) === String(req.params.claimId));
-  if (claim && claim.claimantEmail) {
-    await mailer.sendClaimDeniedNotification(
-      claim.claimantEmail,
-      item.name
-    );
   }
-  
-      });
-    }
+
+  if (claim.claimantEmail) {
+    await mailer.sendClaimAcceptedNotification(claim.claimantEmail, item.name);
   }
+
   req.flash('success', 'Claim accepted. Verification code sent to all parties.');
   res.redirect('/dashboard');
 });
@@ -453,7 +432,60 @@ router.post('/:id/claim/:claimId/deny', requireLogin, async (req, res) => {
   }
 
   await itemModel.updateClaimStatus(item.id, req.params.claimId, 'denied');
+  const claim = (item.claims || []).find((c) => String(c.id) === String(req.params.claimId));
+  if (claim && claim.claimantEmail) {
+    await mailer.sendClaimDeniedNotification(claim.claimantEmail, item.name);
+  }
   req.flash('info', 'Claim denied.');
+  res.redirect('/dashboard');
+});
+
+router.post('/:id/resolve', requireLogin, async (req, res) => {
+  const item = await itemModel.findById(req.params.id);
+  if (!item) return res.status(404).render('404', { title: 'Not Found' });
+
+  const isOwner = String(item.userId) === String(req.session.user.id);
+  const isAdmin = req.session.user && req.session.user.role === 'admin';
+  if (!isOwner && !isAdmin) {
+    req.flash('error', 'You do not have permission to mark this item as returned.');
+    return res.redirect(`/items/${item.id}`);
+  }
+
+  await itemModel.updateStatus(item.id, 'resolved');
+  req.flash('success', 'Item marked as returned.');
+  res.redirect('/dashboard');
+});
+
+router.post('/:id/return-admin', requireLogin, async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'admin') {
+    req.flash('error', 'Admin access required.');
+    return res.redirect('/dashboard');
+  }
+
+  const item = await itemModel.findById(req.params.id);
+  if (!item) return res.status(404).render('404', { title: 'Not Found' });
+
+  await itemModel.updateItem(item.id, {
+    returnAdminConfirmedAt: new Date().toISOString(),
+    returnAdminConfirmedBy: req.session.user.id,
+  });
+  req.flash('success', 'Return confirmation recorded.');
+  res.redirect(`/items/${item.id}`);
+});
+
+router.post('/:id/return-success', requireLogin, async (req, res) => {
+  const item = await itemModel.findById(req.params.id);
+  if (!item) return res.status(404).render('404', { title: 'Not Found' });
+
+  const isOwner = String(item.userId) === String(req.session.user.id);
+  const isAdmin = req.session.user && req.session.user.role === 'admin';
+  if (!isOwner && !isAdmin) {
+    req.flash('error', 'You do not have permission to complete this return.');
+    return res.redirect(`/items/${item.id}`);
+  }
+
+  await itemModel.updateStatus(item.id, 'resolved');
+  req.flash('success', 'Item marked as successfully returned.');
   res.redirect('/dashboard');
 });
 

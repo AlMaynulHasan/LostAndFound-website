@@ -23,7 +23,11 @@ async function createItem(item) {
     name: sanitize(item.name),
     description: sanitize(item.description),
     location: sanitize(item.location),
+    locationDetails: sanitize(item.locationDetails),
     category: sanitize(item.category),
+    contactMethod: sanitize(item.contactMethod),
+    returnInfo: sanitize(item.returnInfo),
+    returnBy: sanitize(item.returnBy),
   };
   
   const record = {
@@ -106,12 +110,12 @@ async function findByUserId(userId, options = {}) {
   }
   return items
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
- 
+    .slice(0, limit);
+}
 
 // Alias for updateStatus
 async function updateItemStatus(id, status) {
   return updateStatus(id, status);
-}   .slice(0, limit);
 }
 
 async function updateStatus(id, status) {
@@ -372,7 +376,13 @@ async function updateItem(id, updates) {
   await db.read();
   const item = (db.data?.items || []).find((row) => row.id === Number(id));
   if (!item) return null;
-  Object.assign(item, updates);
+  const sanitizedUpdates = { ...updates };
+  ['name', 'title', 'description', 'location', 'locationDetails', 'category', 'contactMethod', 'returnInfo', 'returnBy'].forEach((field) => {
+    if (field in sanitizedUpdates) {
+      sanitizedUpdates[field] = sanitize(sanitizedUpdates[field]);
+    }
+  });
+  Object.assign(item, sanitizedUpdates);
   item.updatedAt = new Date().toISOString();
   await db.write();
   return item;

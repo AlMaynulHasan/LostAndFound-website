@@ -1,4 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  if (csrfToken) {
+    document.querySelectorAll('form[method="post"], form[method="POST"]').forEach((form) => {
+      if (!form.querySelector('input[name="_csrf"]')) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = '_csrf';
+        input.value = csrfToken;
+        form.prepend(input);
+      }
+    });
+  }
+
+  const csrfHeaders = () => (csrfToken ? { 'X-CSRF-Token': csrfToken } : {});
+
   document.querySelectorAll('[data-copy-link]').forEach((button) => {
     button.addEventListener('click', async () => {
       const link = button.getAttribute('data-copy-link') || window.location.href;
@@ -135,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await fetch('/chat/read', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ otherId })
       });
     } catch (err) {
@@ -158,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await fetch(isTyping ? '/chat/typing' : '/chat/stop-typing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ recipientId })
       });
     } catch (err) {
@@ -193,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await fetch('/chat/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           recipientId,
           recipientName,

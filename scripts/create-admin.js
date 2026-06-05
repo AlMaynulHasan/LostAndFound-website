@@ -9,10 +9,14 @@ async function createOrUpdateAdmin() {
 
   db.data = db.data || { users: [], items: [] };
 
-  const email = process.env.ADMIN_EMAIL || 'admin@campusfind.local';
-  const password = process.env.ADMIN_PASSWORD || 'Admin@12345';
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
   const name = process.env.ADMIN_NAME || 'Campus Admin';
   const studentId = process.env.ADMIN_STUDENT_ID || 'ADMIN-0001';
+
+  if (!email || !password) {
+    throw new Error('Set ADMIN_EMAIL and ADMIN_PASSWORD in .env before running this script.');
+  }
 
   const existing = (db.data.users || []).find((u) => u.email === email);
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);

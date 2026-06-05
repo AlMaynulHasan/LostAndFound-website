@@ -225,15 +225,13 @@
       <% if (isOwner && itemStatus !== 'resolved') { %>
       <hr />
       <h6 class="mb-2">Update status</h6>
-      <% if (adminReturnConfirmedAt) { %>
-        <form method="post" action="/items/<%= item.id %>/return-success" class="d-grid gap-2">
-          <button class="btn btn-primary" type="submit">Mark as successfully returned</button>
-        </form>
-      <% } else { %>
-        <div class="p-3 rounded" style="background: rgba(59, 130, 246, 0.1);">
-          <strong class="d-block mb-1">Awaiting admin confirmation</strong>
-          <span class="text-muted">An admin must confirm the return before you can mark it completed.</span>
-        </div>
+      <form method="post" action="/items/<%= item.id %>/resolve" class="d-grid gap-2">
+        <button class="btn btn-success" type="submit">
+          <i class="bi bi-check-circle me-1"></i>Mark as Returned
+        </button>
+      </form>
+      <% if (!adminReturnConfirmedAt) { %>
+        <div class="small text-muted mt-2">Use this after the item reaches the rightful owner.</div>
       <% } %>
       <% } else if (isOwner && itemStatus === 'resolved') { %>
       <div class="mt-4 p-3 rounded" style="background: rgba(16, 185, 129, 0.12);">

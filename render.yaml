@@ -29,3 +29,5 @@ services:
         sync: false
       - key: ADMIN_NAME
         sync: false
+      - key: ADMIN_STUDENT_ID
+        sync: false

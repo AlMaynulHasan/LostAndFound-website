@@ -51,8 +51,21 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('layout', 'layout');
 app.use(expressLayouts);
 
-// Security middleware
-app.use(helmet());
+// Security middleware. Keep CSP compatible with the Bootstrap/Google assets used by EJS views.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"],
+        "font-src": ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com", "data:"],
+        "img-src": ["'self'", "data:", "https:", "blob:"],
+        "connect-src": ["'self'"],
+      },
+    },
+  })
+);
 
 // Rate limiting middleware
 const globalLimiter = rateLimit({
@@ -163,11 +176,7 @@ app.use((err, req, res, next) => {
   } else {
     next(err);
   }
-}
-app.use('/items', itemRoutes);
-app.use('/chat', chatRoutes);
-app.use('/dashboard', dashboardRoutes);
-app.use('/admin', adminRoutes);
+});
 
 app.use((req, res) => {
   res.status(404).render('404', { title: 'Not Found' });

@@ -1,34 +1,36 @@
 const bcrypt = require('bcryptjs');
-const { db } = require('../db');
+const { get, run } = require('../db/sqlite');
 
 const SALT_ROUNDS = 12;
 
+function rowToUser(row) {
+  return row ? { ...row } : null;
+}
+
 function getNextUserId() {
-  const users = db.data?.users || [];
-  if (!users.length) return 1;
-  return Math.max(...users.map((u) => parseInt(u.id) || 0)) + 1;
+  const row = get('SELECT MAX(CAST(id AS INTEGER)) AS maxId FROM users');
+  return String((row?.maxId || 0) + 1);
 }
 
 async function createUser({ email, studentId, name, password, role = 'user' }) {
-  await db.read();
-  db.data = db.data || { users: [], items: [], messages: [] };
-
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  const id = String(getNextUserId());
-
+  const now = new Date().toISOString();
   const user = {
-    id,
+    id: getNextUserId(),
     email: (email || '').toLowerCase().trim(),
     studentId,
     name,
     passwordHash,
     role,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
 
-  db.data.users.push(user);
-  await db.write();
+  run(
+    `INSERT INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [user.id, user.email, user.studentId, user.name, user.passwordHash, user.role, user.createdAt, user.updatedAt]
+  );
 
   return {
     id: user.id,
@@ -41,16 +43,44 @@ async function createUser({ email, studentId, name, password, role = 'user' }) {
 
 async function findByEmail(email) {
   if (!email) return null;
-  await db.read();
-  const users = db.data?.users || [];
-  return users.find((u) => u.email === email.toLowerCase().trim());
+  return rowToUser(get('SELECT * FROM users WHERE email = ?', [(email || '').toLowerCase().trim()]));
 }
 
 async function findById(id) {
   if (!id) return null;
-  await db.read();
-  const users = db.data?.users || [];
-  return users.find((u) => String(u.id) === String(id));
+  return rowToUser(get('SELECT * FROM users WHERE id = ?', [String(id)]));
+}
+
+async function findAdmins() {
+  const { all } = require('../db/sqlite');
+  return all('SELECT * FROM users WHERE role = ? ORDER BY name', ['admin']).map(rowToUser);
+}
+
+async function upsertUser({ id, email, studentId, name, passwordHash, role = 'user', createdAt, updatedAt }) {
+  const userId = id ? String(id) : getNextUserId();
+  const now = new Date().toISOString();
+  run(
+    `INSERT INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       email = excluded.email,
+       studentId = excluded.studentId,
+       name = excluded.name,
+       passwordHash = excluded.passwordHash,
+       role = excluded.role,
+       updatedAt = excluded.updatedAt`,
+    [
+      userId,
+      (email || '').toLowerCase().trim(),
+      studentId || null,
+      name || 'User',
+      passwordHash,
+      role,
+      createdAt || now,
+      updatedAt || now,
+    ]
+  );
+  return findById(userId);
 }
 
 async function verifyPassword(user, password) {
@@ -62,5 +92,7 @@ module.exports = {
   createUser,
   findByEmail,
   findById,
+  findAdmins,
+  upsertUser,
   verifyPassword,
 };

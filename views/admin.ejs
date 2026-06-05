@@ -297,6 +297,7 @@ function submitVerification() {
   const claimId = document.getElementById('verifyClaimId').value;
   const inputCode = document.getElementById('verificationCodeInput').value;
   const expectedCode = document.getElementById('verifyCode').value;
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
   if (inputCode !== expectedCode) {
     alert('Invalid verification code!');
@@ -307,6 +308,7 @@ function submitVerification() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
     },
     body: JSON.stringify({ verificationCode: inputCode })
   })
