@@ -226,7 +226,83 @@ const db = {
     this.data = { users, items, messages };
   },
   async write() {
-    throw new Error('Direct db.write() is not supported after SQLite migration. Use model helpers instead.');
+    // Sync in-memory data back to SQLite
+    const { insertItem, insertClaim } = (() => {
+      // Inline the sync logic using the existing insert functions
+      const syncItems = transaction((items) => {
+        run('DELETE FROM items');
+        run('DELETE FROM claims');
+        items.forEach((item) => {
+          run(
+            `INSERT OR REPLACE INTO items
+              (id, userId, ownerEmail, type, title, name, description, location, locationDetails, dateLost,
+               category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy, status,
+               verificationQuestions, returnAdminConfirmedAt, returnAdminConfirmedBy, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              Number(item.id),
+              item.userId ? String(item.userId) : null,
+              item.ownerEmail || null,
+              item.type || 'lost',
+              item.title || item.name || null,
+              item.name || 'Untitled',
+              item.description || null,
+              item.location || null,
+              item.locationDetails || null,
+              item.dateLost || null,
+              item.category || null,
+              item.contactMethod || null,
+              item.anonymous ? 1 : 0,
+              item.reportedByName || null,
+              item.photoPath || null,
+              item.returnInfo || null,
+              item.returnBy || null,
+              item.status || 'reported',
+              stringifyJson(item.verificationQuestions || []),
+              item.returnAdminConfirmedAt || null,
+              item.returnAdminConfirmedBy || null,
+              item.createdAt || new Date().toISOString(),
+              item.updatedAt || null,
+            ]
+          );
+          (item.claims || []).forEach((claim) => {
+            run(
+              `INSERT OR REPLACE INTO claims
+                (id, itemId, claimantId, claimantName, claimantEmail, description, claimedDate, proofPath, status,
+                 answers, score, seenByClaimant, returnStatus, acceptedAt, returnWindowEndsAt, returnDueAt,
+                 verificationCode, returnRequestedAt, returnCompletedAt, returnReminderSentAt, createdAt, updatedAt)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                claim.id ? String(claim.id) : null,
+                Number(item.id),
+                claim.claimantId ? String(claim.claimantId) : null,
+                claim.claimantName || null,
+                claim.claimantEmail || null,
+                claim.description || null,
+                claim.claimedDate || null,
+                claim.proofPath || null,
+                claim.status || 'pending',
+                stringifyJson(claim.answers || []),
+                stringifyJson(claim.score || null),
+                claim.seenByClaimant ? 1 : 0,
+                claim.returnStatus || null,
+                claim.acceptedAt || null,
+                claim.returnWindowEndsAt || null,
+                claim.returnDueAt || null,
+                claim.verificationCode || null,
+                claim.returnRequestedAt || null,
+                claim.returnCompletedAt || null,
+                claim.returnReminderSentAt || null,
+                claim.createdAt || new Date().toISOString(),
+                claim.updatedAt || null,
+              ]
+            );
+          });
+        });
+      });
+      return { syncItems };
+    })();
+    syncItems(this.data.items || []);
   },
 };
 

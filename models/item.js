@@ -11,34 +11,42 @@ function getNextId(list) {
 }
 
 async function createItem(item) {
-  await db.read();
-  db.data = db.data || { users: [], items: [] };
+  const { run, get, stringifyJson } = require('../db/sqlite');
 
-  const id = getNextId(db.data.items);
-  
   // Sanitize user input to prevent XSS
-  const sanitizedItem = {
-    ...item,
-    title: sanitize(item.title || item.name),
-    name: sanitize(item.name),
-    description: sanitize(item.description),
-    location: sanitize(item.location),
-    locationDetails: sanitize(item.locationDetails),
-    category: sanitize(item.category),
-    contactMethod: sanitize(item.contactMethod),
-    returnInfo: sanitize(item.returnInfo),
-    returnBy: sanitize(item.returnBy),
-  };
-  
-  const record = {
-    id,
-    ...sanitizedItem,
-    createdAt: new Date().toISOString(),
-  };
+  const now = new Date().toISOString();
 
-  db.data.items.push(record);
-  await db.write();
-  return id;
+  const result = run(
+    `INSERT INTO items
+      (userId, ownerEmail, type, title, name, description, location, locationDetails, dateLost,
+       category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy, status,
+       verificationQuestions, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      item.userId ? String(item.userId) : null,
+      item.ownerEmail || null,
+      item.type || 'lost',
+      sanitize(item.title || item.name || ''),
+      sanitize(item.name || 'Untitled'),
+      sanitize(item.description || ''),
+      sanitize(item.location || ''),
+      sanitize(item.locationDetails || ''),
+      item.dateLost || null,
+      sanitize(item.category || ''),
+      sanitize(item.contactMethod || ''),
+      item.anonymous ? 1 : 0,
+      item.reportedByName || null,
+      item.photoPath || null,
+      sanitize(item.returnInfo || ''),
+      sanitize(item.returnBy || ''),
+      item.status || 'reported',
+      stringifyJson(item.verificationQuestions || []),
+      now,
+      now,
+    ]
+  );
+
+  return result.lastInsertRowid;
 }
 
 async function findRecentItems(limit = 20) {
@@ -119,12 +127,11 @@ async function updateItemStatus(id, status) {
 }
 
 async function updateStatus(id, status) {
-  await db.read();
-  const item = (db.data?.items || []).find((row) => row.id === Number(id));
-  if (!item) return null;
-  item.status = status;
-  item.updatedAt = new Date().toISOString();
-  await db.write();
+  const { run } = require('../db/sqlite');
+  const now = new Date().toISOString();
+  const result = run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', [status, now, Number(id)]);
+  if (result.changes === 0) return null;
+  const item = { id: Number(id), status, updatedAt: now };
   return item;
 }
 
@@ -363,12 +370,10 @@ async function findSimilarItems(sourceItem, limit = 3) {
 }
 
 async function deleteItem(id) {
-  await db.read();
-  const items = db.data?.items || [];
-  const index = items.findIndex((item) => item.id === Number(id));
-  if (index === -1) return false;
-  items.splice(index, 1);
-  await db.write();
+  const { run } = require('../db/sqlite');
+  const result = run('DELETE FROM items WHERE id = ?', [Number(id)]);
+  if (result.changes === 0) return false;
+  const deleted = true;
   return true;
 }
 

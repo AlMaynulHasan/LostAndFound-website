@@ -163,7 +163,8 @@ router.post('/report', requireLogin, upload.single('photo'), async (req, res) =>
     const redirectUrl = type === 'found' ? '/items/found' : '/items/lost';
     res.redirect(redirectUrl);
   } catch (error) {
-    req.flash('error', 'Failed to report item. Please try again.');
+    console.error('[REPORT ERROR]', error);
+    req.flash('error', 'Failed to report item. Please try again. Error: ' + error.message);
     res.redirect('/items/report');
   }
 });
