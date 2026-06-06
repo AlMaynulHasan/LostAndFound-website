@@ -13,7 +13,6 @@ const bodyParser = require('body-parser');
 const flash = require('connect-flash');
 const expressLayouts = require('express-ejs-layouts');
 const helmet = require('helmet');
-const csrf = require('csurf');
 const rateLimit = require('express-rate-limit');
 
 const { init } = require('./db');
@@ -112,8 +111,6 @@ app.use(
 );
 
 // CSRF protection middleware
-const csrfProtection = csrf({ cookie: false });
-app.use(csrfProtection);
 
 app.use(flash());
 
@@ -193,9 +190,33 @@ app.get('/setup-admin', async (req, res) => {
   }
 });
 
-// Make CSRF token available to views
+// Simple CSRF protection — generate token per session, validate on POST
+const { randomBytes } = require('crypto');
+
 app.use((req, res, next) => {
-  res.locals.csrfToken = req.csrfToken ? req.csrfToken() : '';
+  // Generate token if session doesn't have one
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = randomBytes(32).toString('hex');
+  }
+  res.locals.csrfToken = req.session.csrfToken;
+  next();
+});
+
+// Validate CSRF token on state-changing requests
+// Skip multipart/form-data — multer parses body per-route, _csrf not available here
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) return next();
+    const token = req.body._csrf || req.headers['x-csrf-token'] || '';
+    const sessionToken = req.session.csrfToken || '';
+    if (!token || !sessionToken || token !== sessionToken) {
+      return res.status(403).render('403', {
+        title: 'Forbidden',
+        message: 'Invalid or missing CSRF token. Please go back and try again.'
+      });
+    }
+  }
   next();
 });
 
@@ -210,14 +231,10 @@ app.use('/chat', chatRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/admin', adminRoutes);
 
-// CSRF error handler
+// General error handler
 app.use((err, req, res, next) => {
-  if (err.code === 'EBADCSRFTOKEN') {
-    // CSRF token errors should result in a 403 Forbidden
-    res.status(403).render('403', { title: 'Forbidden', message: 'Invalid CSRF token' });
-  } else {
-    next(err);
-  }
+  console.error(err.stack);
+  res.status(500).render('403', { title: 'Server Error', message: err.message });
 });
 
 app.use((req, res) => {
