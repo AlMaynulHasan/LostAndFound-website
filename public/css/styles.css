@@ -1587,3 +1587,161 @@ body.chat-open {
     padding-bottom: 80px !important;
   }
 }
+
+/* ===========================
+   WALL OF KINDNESS
+   =========================== */
+
+.wall-kindness-badge {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(245, 87, 108, 0.12) 0%, rgba(255, 179, 71, 0.12) 100%);
+  border: 1px solid rgba(245, 87, 108, 0.25);
+  color: #c0392b;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kindness-card {
+  background: var(--surface);
+  border: 1px solid var(--cloud);
+  border-radius: 16px;
+  padding: 1.2rem 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
+}
+
+.kindness-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(11, 31, 42, 0.1);
+}
+
+.kindness-rank {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.kindness-avatar {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 auto;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.kindness-name {
+  font-size: 0.88rem;
+  max-width: 100%;
+  padding: 0 4px;
+}
+
+.kindness-title {
+  font-size: 0.72rem;
+}
+
+.bg-teal-soft {
+  background: rgba(18, 179, 168, 0.12) !important;
+}
+
+.text-teal {
+  color: var(--teal) !important;
+}
+
+.kindness-stats {
+  font-size: 0.72rem;
+  min-height: 1.2em;
+}
+
+/* ===========================
+   CATEGORY PLACEHOLDER ICON
+   =========================== */
+
+.category-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  background: linear-gradient(135deg, var(--mist) 0%, var(--cloud) 100%);
+  border-radius: inherit;
+}
+
+.category-placeholder i {
+  opacity: 0.75;
+}
+
+.category-placeholder span {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ===========================
+   CLAIM WIZARD
+   =========================== */
+
+.claim-wizard-step {
+  display: none;
+}
+.claim-wizard-step.active {
+  display: block;
+}
+
+.claim-progress {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.claim-progress-dot {
+  height: 4px;
+  flex: 1;
+  border-radius: 4px;
+  background: var(--cloud);
+  transition: background 0.3s ease;
+}
+
+.claim-progress-dot.done {
+  background: var(--teal);
+}
+
+.claim-step-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.claim-nav-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cloud);
+}
+
+.claim-summary-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--cloud);
+  font-size: 0.9rem;
+}
+
+.claim-summary-row .label {
+  font-weight: 600;
+  min-width: 120px;
+  color: var(--muted);
+}

@@ -97,9 +97,11 @@
                     </div>
                     <div class="d-flex gap-2">
                       <form method="post" action="/items/<%= req.itemId %>/claim/<%= req.claim.id %>/accept">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                         <button class="btn btn-primary btn-sm" type="submit">Accept</button>
                       </form>
                       <form method="post" action="/items/<%= req.itemId %>/claim/<%= req.claim.id %>/deny">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                         <button class="btn btn-outline-secondary btn-sm" type="submit">Deny</button>
                       </form>
                     </div>
@@ -179,6 +181,7 @@
                       <a href="/items/<%= entry.itemId %>" class="btn btn-outline-secondary btn-sm">View item</a>
                       <% if (returnStatus === 'requested') { %>
                         <form method="post" action="/items/<%= entry.itemId %>/claim/<%= entry.claim.id %>/return-confirm">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                           <button class="btn btn-outline-danger btn-sm" type="submit">Confirm return</button>
                         </form>
                       <% } %>
@@ -246,6 +249,7 @@
                       <% } %>
                       <% if (canRequestReturn) { %>
                         <form method="post" action="/items/<%= entry.itemId %>/claim/<%= entry.claim.id %>/return-request">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                           <button class="btn btn-outline-danger btn-sm" type="submit">Request return</button>
                         </form>
                       <% } %>
@@ -312,6 +316,7 @@
                       <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm flex-grow-1">View Details</a>
                       <% if (item.status !== 'resolved') { %>
                         <form method="post" action="/dashboard/<%= item.id %>/mark-returned" style="width: auto;">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                           <button type="submit" class="btn btn-success btn-sm" title="Mark as Returned">✓</button>
                         </form>
                       <% } %>
@@ -359,6 +364,7 @@
                       <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm flex-grow-1">View Details</a>
                       <% if (item.status !== 'resolved') { %>
                         <form method="post" action="/dashboard/<%= item.id %>/mark-returned" style="width: auto;">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                           <button type="submit" class="btn btn-success btn-sm" title="Mark as Returned">✓</button>
                         </form>
                       <% } %>
@@ -405,6 +411,7 @@
                       <a href="/items/<%= item.id %>" class="btn btn-outline-primary btn-sm flex-grow-1">View Details</a>
                       <% if (item.status !== 'resolved') { %>
                         <form method="post" action="/dashboard/<%= item.id %>/mark-returned" style="width: auto;">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                           <button type="submit" class="btn btn-success btn-sm" title="Mark as Returned">✓</button>
                         </form>
                       <% } %>

@@ -125,7 +125,7 @@
         <% if (item.photoPath) { %>
         <img src="<%= item.photoPath %>" alt="<%= item.name %>" />
         <% } else { %>
-        <i class="bi bi-camera" style="font-size: 2rem; color: rgba(11, 31, 42, 0.6);"></i>
+        <%- include('partials/category-icon', { category: item.category, size: '2.5rem' }) %>
         <% } %>
       </div>
       <div class="item-body">
@@ -161,7 +161,7 @@
         <% if (item.photoPath) { %>
         <img src="<%= item.photoPath %>" alt="<%= item.name %>" />
         <% } else { %>
-        <i class="bi bi-camera" style="font-size: 2rem; color: rgba(11, 31, 42, 0.6);"></i>
+        <%- include('partials/category-icon', { category: item.category, size: '2.5rem' }) %>
         <% } %>
       </div>
       <div class="item-body">
@@ -208,3 +208,45 @@
     </div>
   </div>
 </section>
+
+<% if (topHelpers && topHelpers.length) { %>
+<section class="section bg-light">
+  <div class="container">
+    <div class="section-heading text-center mb-4">
+      <div class="wall-kindness-badge">
+        <i class="bi bi-heart-fill me-2" style="color: #f5576c;"></i>Wall of Kindness
+      </div>
+      <h2 class="mt-2">Campus Heroes</h2>
+      <p class="text-muted">Students who go the extra mile to return lost items. Every act of kindness counts!</p>
+    </div>
+    <div class="row g-3 justify-content-center">
+      <% topHelpers.forEach((helper) => { %>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="kindness-card text-center reveal">
+          <div class="kindness-rank"><%= helper.badge %></div>
+          <div class="kindness-avatar">
+            <%= helper.name.charAt(0).toUpperCase() %>
+          </div>
+          <div class="kindness-name fw-semibold text-truncate mt-2"><%= helper.name %></div>
+          <div class="kindness-title small text-muted"><%= helper.helperTitle %></div>
+          <div class="kindness-points mt-1">
+            <span class="badge bg-teal-soft text-teal"><%= helper.points %> pts</span>
+          </div>
+          <div class="kindness-stats small text-muted mt-1">
+            <% if (helper.resolved > 0) { %>
+              <i class="bi bi-arrow-return-left me-1"></i><%= helper.resolved %> returned
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <div class="text-center mt-4">
+      <p class="text-muted small">
+        <i class="bi bi-info-circle me-1"></i>
+        Points: +1 for reporting a found item &middot; +2 when an item is successfully returned
+      </p>
+    </div>
+  </div>
+</section>
+<% } %>

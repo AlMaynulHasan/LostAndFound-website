@@ -1,0 +1,43 @@
+<%
+  // Category-based placeholder icon partial
+  // Usage: <%- include('partials/category-icon', { category: item.category, size: '2.5rem' }) %>
+  const _cat = (category || '').toLowerCase();
+  let _icon = 'bi-question-circle';
+  let _color = '#8a9bb0';
+  if (_cat.includes('phone') || _cat.includes('mobile') || _cat.includes('electronic')) {
+    _icon = 'bi-phone'; _color = '#4facfe';
+  } else if (_cat.includes('laptop') || _cat.includes('computer')) {
+    _icon = 'bi-laptop'; _color = '#4facfe';
+  } else if (_cat.includes('bag') || _cat.includes('backpack')) {
+    _icon = 'bi-bag'; _color = '#a78bfa';
+  } else if (_cat.includes('wallet') || _cat.includes('purse')) {
+    _icon = 'bi-wallet2'; _color = '#f59e0b';
+  } else if (_cat.includes('key')) {
+    _icon = 'bi-key'; _color = '#f97316';
+  } else if (_cat.includes('id') || _cat.includes('card') || _cat.includes('document')) {
+    _icon = 'bi-person-vcard'; _color = '#10b981';
+  } else if (_cat.includes('book') || _cat.includes('notebook')) {
+    _icon = 'bi-book'; _color = '#06b6d4';
+  } else if (_cat.includes('cloth') || _cat.includes('shirt') || _cat.includes('jacket') || _cat.includes('wear')) {
+    _icon = 'bi-layers'; _color = '#ec4899';
+  } else if (_cat.includes('umbrella')) {
+    _icon = 'bi-umbrella'; _color = '#6366f1';
+  } else if (_cat.includes('water') || _cat.includes('bottle')) {
+    _icon = 'bi-droplet'; _color = '#0ea5e9';
+  } else if (_cat.includes('glass') || _cat.includes('spectacle')) {
+    _icon = 'bi-eyeglasses'; _color = '#64748b';
+  } else if (_cat.includes('watch')) {
+    _icon = 'bi-watch'; _color = '#d97706';
+  } else if (_cat.includes('jewel') || _cat.includes('ring') || _cat.includes('necklace')) {
+    _icon = 'bi-gem'; _color = '#db2777';
+  } else if (_cat.includes('calculator')) {
+    _icon = 'bi-calculator'; _color = '#475569';
+  } else if (_cat.includes('headphone') || _cat.includes('earphone') || _cat.includes('earbud')) {
+    _icon = 'bi-headphones'; _color = '#4facfe';
+  }
+  const _size = size || '2.5rem';
+%>
+<div class="category-placeholder d-flex flex-column align-items-center justify-content-center h-100 gap-2">
+  <i class="bi <%= _icon %>" style="font-size: <%= _size %>; color: <%= _color %>;"></i>
+  <span class="small text-muted" style="font-size: 0.72rem;"><%= category || 'Item' %></span>
+</div>

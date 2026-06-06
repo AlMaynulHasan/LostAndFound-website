@@ -441,6 +441,57 @@ async function getPendingReturnVerifications() {
   return pendingVerifications.sort((a, b) => new Date(b.acceptedAt) - new Date(a.acceptedAt));
 }
 
+/**
+ * Get top helpers for the Wall of Kindness leaderboard.
+ * A "helper point" = 1 point per found item reported + 2 points per resolved item.
+ * Returns top N users with name, points, badge, and count of returns.
+ */
+async function getTopHelpers(limit = 6) {
+  await db.read();
+  const items = db.data?.items || [];
+
+  // Tally points per userId
+  const tally = {};
+  items.forEach((item) => {
+    if (!item.userId) return;
+    if (!tally[item.userId]) {
+      tally[item.userId] = {
+        userId: item.userId,
+        name: item.reportedByName || item.ownerName || 'Anonymous',
+        foundReported: 0,
+        resolved: 0,
+        points: 0,
+      };
+    }
+    if (item.type === 'found') {
+      tally[item.userId].foundReported += 1;
+      tally[item.userId].points += 1;
+    }
+    if (item.status === 'resolved') {
+      tally[item.userId].resolved += 1;
+      tally[item.userId].points += 2;
+    }
+  });
+
+  return Object.values(tally)
+    .filter((u) => u.points > 0)
+    .sort((a, b) => b.points - a.points)
+    .slice(0, limit)
+    .map((u, idx) => ({
+      ...u,
+      rank: idx + 1,
+      badge: idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '⭐',
+      helperTitle:
+        u.points >= 20
+          ? 'Campus Champion'
+          : u.points >= 10
+          ? 'Super Helper'
+          : u.points >= 5
+          ? 'Kind Helper'
+          : 'Helper',
+    }));
+}
+
 module.exports = {
   createItem,
   updateItemStatus,
@@ -467,4 +518,5 @@ module.exports = {
   markReturnReminderSent,
   markItemReturned,
   getPendingReturnVerifications,
+  getTopHelpers,
 };

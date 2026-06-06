@@ -16,6 +16,7 @@
           action="/items/report"
           enctype="multipart/form-data"
         >
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Report type</label>

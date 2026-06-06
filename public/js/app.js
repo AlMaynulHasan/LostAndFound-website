@@ -439,3 +439,111 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeChatBtn) closeChatBtn.addEventListener('click', closeChat);
   if (chatOverlay) chatOverlay.addEventListener('click', closeChat);
 });
+
+/* =============================================
+   CLAIM WIZARD — multi-step modal navigation
+   ============================================= */
+(function () {
+  let currentStep = 1;
+  const TOTAL_STEPS = 4;
+  const stepLabels = [
+    'Step 1 of 4 — Your info',
+    'Step 2 of 4 — Verification questions',
+    'Step 3 of 4 — Upload proof',
+    'Step 4 of 4 — Review & submit',
+  ];
+
+  function getEl(id) { return document.getElementById(id); }
+
+  function updateWizardUI() {
+    for (let i = 1; i <= TOTAL_STEPS; i++) {
+      const step = getEl('claimStep' + i);
+      if (step) step.classList.toggle('active', i === currentStep);
+      const dot = document.querySelector('.claim-progress-dot[data-step="' + i + '"]');
+      if (dot) dot.classList.toggle('done', i <= currentStep);
+    }
+    const label = getEl('claimStepLabel');
+    if (label) label.textContent = stepLabels[currentStep - 1];
+
+    const prevBtn = getEl('claimPrevBtn');
+    const nextBtn = getEl('claimNextBtn');
+    const submitBtn = getEl('claimSubmitBtn');
+    const cancelBtn = getEl('claimCancelBtn');
+
+    if (prevBtn) prevBtn.style.display = currentStep > 1 ? '' : 'none';
+    if (cancelBtn) cancelBtn.style.display = currentStep === 1 ? '' : 'none';
+
+    if (currentStep === TOTAL_STEPS) {
+      if (nextBtn) nextBtn.classList.add('d-none');
+      if (submitBtn) submitBtn.classList.remove('d-none');
+      populateSummary();
+    } else {
+      if (nextBtn) nextBtn.classList.remove('d-none');
+      if (submitBtn) submitBtn.classList.add('d-none');
+    }
+  }
+
+  function populateSummary() {
+    const form = getEl('claimWizardForm');
+    if (!form) return;
+    const nameInput = form.querySelector('[name="claimantDisplayName"]');
+    const dateInput = form.querySelector('[name="claimedDate"]');
+    const answerInputs = form.querySelectorAll('[name="answers[]"]');
+    const proofInput = getEl('proofFileInput');
+
+    const nameEl = getEl('summaryNameVal');
+    const dateEl = getEl('summaryDateVal');
+    const answersEl = getEl('summaryAnswersVal');
+    const proofEl = getEl('summaryProofVal');
+
+    if (nameEl && nameInput) nameEl.textContent = nameInput.value || '—';
+    if (dateEl && dateInput) dateEl.textContent = dateInput.value || 'Not specified';
+    if (answersEl && answerInputs.length) {
+      const answers = Array.from(answerInputs)
+        .map((inp, i) => inp.value ? `Q${i + 1}: ${inp.value}` : null)
+        .filter(Boolean);
+      answersEl.textContent = answers.length ? answers.join(' · ') : 'None provided';
+    }
+    if (proofEl && proofInput) {
+      proofEl.textContent = proofInput.files && proofInput.files.length ? proofInput.files[0].name : 'No photo';
+    }
+  }
+
+  // Global function called by onclick in template
+  window.claimWizardNav = function (direction) {
+    const next = currentStep + direction;
+    if (next < 1 || next > TOTAL_STEPS) return;
+    currentStep = next;
+    updateWizardUI();
+  };
+
+  // Proof image preview
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'proofFileInput') {
+      const file = e.target.files[0];
+      const preview = getEl('proofPreview');
+      const img = getEl('proofPreviewImg');
+      if (file && preview && img) {
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+          img.src = ev.target.result;
+          preview.style.display = '';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  });
+
+  // Reset wizard when modal closes
+  document.addEventListener('hidden.bs.modal', function (e) {
+    if (e.target && e.target.id === 'claimModal') {
+      currentStep = 1;
+      updateWizardUI();
+    }
+  });
+
+  // Init on DOM ready
+  document.addEventListener('DOMContentLoaded', function () {
+    if (getEl('claimStep1')) updateWizardUI();
+  });
+})();

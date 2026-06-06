@@ -119,8 +119,7 @@
         <img src="<%= item.photoPath %>" alt="Item photo" />
         <% } else { %>
         <div class="text-center text-muted">
-          <i class="bi bi-camera" style="font-size: 2rem"></i>
-          <div class="small mt-2">No photo provided</div>
+          <%- include('partials/category-icon', { category: item.category, size: '2.2rem' }) %>
         </div>
         <% } %>
       </div>

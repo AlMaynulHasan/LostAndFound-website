@@ -41,4 +41,12 @@ if (cloudinaryUrl) {
 cloudinary.isConfigured = configured;
 cloudinary.configError = configError;
 
+// Default upload options — keep images under ~200KB and extend free tier
+cloudinary.defaultUploadOptions = {
+  folder: process.env.CLOUDINARY_FOLDER || 'lost2found',
+  transformation: [
+    { width: 800, crop: 'limit', quality: 'auto', fetch_format: 'auto' },
+  ],
+};
+
 module.exports = cloudinary;
