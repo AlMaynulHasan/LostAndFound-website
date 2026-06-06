@@ -17,8 +17,15 @@ const csrf = require('csurf');
 const rateLimit = require('express-rate-limit');
 
 const { init } = require('./db');
-const { sqlite } = require('./db/sqlite');
-const SqliteStore = require('better-sqlite3-session-store')(session);
+let SqliteStore = null;
+let sqliteClient = null;
+try {
+  const { sqlite } = require('./db/sqlite');
+  SqliteStore = require('better-sqlite3-session-store')(session);
+  sqliteClient = sqlite;
+} catch (e) {
+  console.warn('[SESSION] SQLite session store unavailable, using MemoryStore:', e.message);
+}
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
 const indexRoutes = require('./routes/index');
@@ -91,7 +98,7 @@ app.use(bodyParser.json());
 
 app.use(
   session({
-    store: new SqliteStore({ client: sqlite }),
+    ...(SqliteStore && sqliteClient ? { store: new SqliteStore({ client: sqliteClient }) } : {}),
     secret: process.env.SESSION_SECRET || 'campus-lost-found-secret',
     resave: false,
     saveUninitialized: false,
@@ -105,7 +112,7 @@ app.use(
 );
 
 // CSRF protection middleware
-const csrfProtection = csrf({ cookie: false });
+const csrfProtection = csrf({ cookie: true });
 app.use(csrfProtection);
 
 app.use(flash());
@@ -152,6 +159,38 @@ const shouldLogChat = process.env.NODE_ENV !== 'production';
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
+// One-time admin setup route — only works if SETUP_TOKEN env var is set
+app.get('/setup-admin', async (req, res) => {
+  const setupToken = process.env.SETUP_TOKEN;
+  if (!setupToken || req.query.token !== setupToken) {
+    return res.status(403).send('Forbidden');
+  }
+  try {
+    const { get, run } = require('./db/sqlite');
+    const bcrypt = require('bcryptjs');
+    const email = process.env.ADMIN_EMAIL;
+    const password = process.env.ADMIN_PASSWORD;
+    const name = process.env.ADMIN_NAME || 'Admin';
+    const studentId = process.env.ADMIN_STUDENT_ID || 'ADMIN-0001';
+    if (!email || !password) return res.send('ADMIN_EMAIL and ADMIN_PASSWORD env vars not set.');
+    const hash = await bcrypt.hash(password, 12);
+    const now = new Date().toISOString();
+    const existing = get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
+    if (existing) {
+      run('UPDATE users SET passwordHash = ?, role = ?, name = ?, updatedAt = ? WHERE email = ?',
+        [hash, 'admin', name, now, email.toLowerCase()]);
+      return res.send(`Admin updated: ${email} — you can now login at /auth/login`);
+    }
+    const maxRow = get('SELECT MAX(CAST(id AS INTEGER)) AS m FROM users');
+    const id = String((maxRow?.m || 0) + 1);
+    run('INSERT INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,?)',
+      [id, email.toLowerCase(), studentId, name, hash, 'admin', now, now]);
+    res.send(`Admin created: ${email} — login at /auth/login with your ADMIN_PASSWORD`);
+  } catch (err) {
+    res.status(500).send('Error: ' + err.message);
+  }
 });
 
 // Make CSRF token available to views
