@@ -1745,3 +1745,39 @@ body.chat-open {
   min-width: 120px;
   color: var(--muted);
 }
+
+/* ===========================
+   REPORT TYPE TABS
+   =========================== */
+.report-type-tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--mist);
+  padding: 0.4rem;
+  border-radius: 12px;
+}
+.report-tab {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.report-tab.active {
+  background: white;
+  color: var(--teal);
+  box-shadow: 0 2px 8px rgba(11,31,42,0.1);
+}
+.report-tab:hover:not(.active) {
+  background: rgba(255,255,255,0.6);
+  color: var(--ink);
+}
+.bg-danger-soft { background: rgba(220,53,69,0.1) !important; }
+.text-danger { color: #dc3545 !important; }
+.bg-success-soft { background: rgba(25,135,84,0.1) !important; }
+.text-success { color: #198754 !important; }

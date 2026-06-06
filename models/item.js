@@ -136,58 +136,70 @@ async function updateStatus(id, status) {
 }
 
 async function addClaim(itemId, claim) {
-  await db.read();
-  const item = (db.data?.items || []).find((row) => row.id === Number(itemId));
-  if (!item) return null;
-  item.claims = item.claims || [];
-  item.claims.push(claim);
-  item.status = 'pending_claim';
-  item.updatedAt = new Date().toISOString();
-  await db.write();
+  const { run, get, stringifyJson } = require('../db/sqlite');
+  const now = new Date().toISOString();
+  const itemExists = get('SELECT id FROM items WHERE id = ?', [Number(itemId)]);
+  if (!itemExists) return null;
+  run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['pending_claim', now, Number(itemId)]);
+  run(
+    `INSERT INTO claims (id, itemId, claimantId, claimantName, claimantEmail, description,
+       claimedDate, proofPath, status, answers, score, seenByClaimant, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+    [
+      claim.id ? String(claim.id) : require('crypto').randomUUID(),
+      Number(itemId),
+      claim.claimantId ? String(claim.claimantId) : null,
+      claim.claimantName || null,
+      claim.claimantEmail || null,
+      claim.description || null,
+      claim.claimedDate || null,
+      claim.proofPath || null,
+      claim.status || 'pending',
+      stringifyJson(claim.answers || []),
+      stringifyJson(claim.score || null),
+      now, now,
+    ]
+  );
   return claim;
 }
 
 async function updateClaimStatus(itemId, claimId, status) {
-  await db.read();
-  const item = (db.data?.items || []).find((row) => row.id === Number(itemId));
-  if (!item || !item.claims) return null;
+  const { run, get, all, stringifyJson } = require('../db/sqlite');
+  const now = new Date().toISOString();
 
-  const claim = item.claims.find((c) => String(c.id) === String(claimId));
+  const claim = get('SELECT * FROM claims WHERE id = ? AND itemId = ?', [String(claimId), Number(itemId)]);
   if (!claim) return null;
 
-  claim.status = status;
-  claim.updatedAt = new Date().toISOString();
-  if (status === 'accepted' || status === 'denied') {
-    claim.seenByClaimant = false;
-  }
-  if (status === 'accepted') {
-    const acceptedAt = new Date();
-    const returnWindowEndsAt = new Date(acceptedAt.getTime() + 72 * 60 * 60 * 1000);
-    const returnDueAt = new Date(acceptedAt.getTime() + 5 * 24 * 60 * 60 * 1000);
-    claim.acceptedAt = acceptedAt.toISOString();
-    claim.returnWindowEndsAt = returnWindowEndsAt.toISOString();
-    claim.returnDueAt = returnDueAt.toISOString();
-    if (!claim.returnStatus) claim.returnStatus = 'none';
-    
-    // Generate random verification code (6 digit alphanumeric)
-    claim.verificationCode = Math.random().toString(36).substr(2, 6).toUpperCase();
-  }
+  const updates = { status, updatedAt: now, seenByClaimant: (status === 'accepted' || status === 'denied') ? 0 : 1 };
 
   if (status === 'accepted') {
-    // Keep item status as 'reported' to allow multiple users to claim
-    // Item will only change to 'resolved' when admin verifies the return
-    item.status = 'reported';
-    item.updatedAt = new Date().toISOString();
+    const acceptedAt = new Date();
+    updates.acceptedAt = acceptedAt.toISOString();
+    updates.returnWindowEndsAt = new Date(acceptedAt.getTime() + 72 * 60 * 60 * 1000).toISOString();
+    updates.returnDueAt = new Date(acceptedAt.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString();
+    updates.returnStatus = claim.returnStatus || 'none';
+    updates.verificationCode = Math.random().toString(36).substr(2, 6).toUpperCase();
+    run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['reported', now, Number(itemId)]);
   } else if (status === 'denied') {
-    const hasPending = item.claims.some((c) => c.status === 'pending');
-    if (!hasPending) {
-      item.status = 'reported';
-      item.updatedAt = new Date().toISOString();
+    const pending = all('SELECT id FROM claims WHERE itemId = ? AND status = ? AND id != ?', [Number(itemId), 'pending', String(claimId)]);
+    if (pending.length === 0) {
+      run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['reported', now, Number(itemId)]);
     }
   }
 
-  await db.write();
-  return claim;
+  run(
+    `UPDATE claims SET status=?, updatedAt=?, seenByClaimant=?,
+       acceptedAt=COALESCE(?,acceptedAt), returnWindowEndsAt=COALESCE(?,returnWindowEndsAt),
+       returnDueAt=COALESCE(?,returnDueAt), returnStatus=COALESCE(?,returnStatus),
+       verificationCode=COALESCE(?,verificationCode)
+     WHERE id = ?`,
+    [updates.status, updates.updatedAt, updates.seenByClaimant,
+     updates.acceptedAt||null, updates.returnWindowEndsAt||null,
+     updates.returnDueAt||null, updates.returnStatus||null,
+     updates.verificationCode||null, String(claimId)]
+  );
+
+  return get('SELECT * FROM claims WHERE id = ?', [String(claimId)]);
 }
 
 async function getClaimDecisionCountForClaimant(userId) {
@@ -209,25 +221,12 @@ async function getClaimDecisionCountForClaimant(userId) {
 }
 
 async function markClaimDecisionsSeenForClaimant(userId) {
-  await db.read();
-  const items = db.data?.items || [];
-  let changed = false;
-  items.forEach((item) => {
-    (item.claims || []).forEach((claim) => {
-      if (
-        String(claim.claimantId) === String(userId) &&
-        (claim.status === 'accepted' || claim.status === 'denied') &&
-        claim.seenByClaimant !== true
-      ) {
-        claim.seenByClaimant = true;
-        changed = true;
-      }
-    });
-  });
-  if (changed) {
-    await db.write();
-  }
-  return changed;
+  const { run } = require('../db/sqlite');
+  const result = run(
+    `UPDATE claims SET seenByClaimant = 1 WHERE claimantId = ? AND (status = 'accepted' OR status = 'denied') AND seenByClaimant = 0`,
+    [String(userId)]
+  );
+  return result.changes > 0;
 }
 
 async function requestClaimReturn(itemId, claimId, userId) {
@@ -242,12 +241,11 @@ async function requestClaimReturn(itemId, claimId, userId) {
   const windowEnds = claim.returnWindowEndsAt ? new Date(claim.returnWindowEndsAt) : null;
   if (windowEnds && new Date() > windowEnds) return { ok: false, reason: 'window_closed' };
 
-  claim.returnStatus = 'requested';
-  claim.returnRequestedAt = new Date().toISOString();
-  item.status = 'return_pending';
-  item.updatedAt = new Date().toISOString();
-  await db.write();
-  return { ok: true, claim, item };
+  const now3 = new Date().toISOString();
+  const { run: run3 } = require('../db/sqlite');
+  run3('UPDATE claims SET returnStatus=?, returnRequestedAt=?, updatedAt=? WHERE id=?', ['requested', now3, now3, String(claimId)]);
+  run3('UPDATE items SET status=?, updatedAt=? WHERE id=?', ['return_pending', now3, Number(itemId)]);
+  return { ok: true };
 }
 
 async function confirmClaimReturn(itemId, claimId, actorUserId) {
@@ -257,14 +255,12 @@ async function confirmClaimReturn(itemId, claimId, actorUserId) {
   const claim = item.claims.find((c) => String(c.id) === String(claimId));
   if (!claim) return { ok: false, reason: 'not_found' };
 
-  claim.returnStatus = 'completed';
-  claim.returnCompletedAt = new Date().toISOString();
-  claim.status = 'returned';
-  claim.updatedAt = new Date().toISOString();
-  item.status = 'reported';
-  item.updatedAt = new Date().toISOString();
-  await db.write();
-  return { ok: true, claim, item };
+  const now4 = new Date().toISOString();
+  const { run: run4 } = require('../db/sqlite');
+  run4('UPDATE claims SET returnStatus=?, returnCompletedAt=?, status=?, updatedAt=? WHERE id=?',
+    ['completed', now4, 'returned', now4, String(claimId)]);
+  run4('UPDATE items SET status=?, updatedAt=? WHERE id=?', ['reported', now4, Number(itemId)]);
+  return { ok: true };
 }
 
 async function markReturnReminderSent(itemId, claimId) {
@@ -273,8 +269,9 @@ async function markReturnReminderSent(itemId, claimId) {
   if (!item || !item.claims) return false;
   const claim = item.claims.find((c) => String(c.id) === String(claimId));
   if (!claim) return false;
-  claim.returnReminderSentAt = new Date().toISOString();
-  await db.write();
+  const { run: run5 } = require('../db/sqlite');
+  run5('UPDATE claims SET returnReminderSentAt=?, updatedAt=? WHERE id=?',
+    [new Date().toISOString(), new Date().toISOString(), String(claimId)]);
   return true;
 }
 
@@ -387,10 +384,12 @@ async function updateItem(id, updates) {
       sanitizedUpdates[field] = sanitize(sanitizedUpdates[field]);
     }
   });
-  Object.assign(item, sanitizedUpdates);
-  item.updatedAt = new Date().toISOString();
-  await db.write();
-  return item;
+  const { run: run6 } = require('../db/sqlite');
+  const now6 = new Date().toISOString();
+  const fields = Object.keys(sanitizedUpdates).map(k => `${k} = ?`).join(', ');
+  const values = [...Object.values(sanitizedUpdates), now6, Number(id)];
+  run6(`UPDATE items SET ${fields}, updatedAt = ? WHERE id = ?`, values);
+  return { id: Number(id), ...sanitizedUpdates, updatedAt: now6 };
 }
 
 async function getItemsByUser(userId) {
@@ -408,16 +407,12 @@ async function markItemReturned(itemId, claimId) {
   const claim = item.claims.find((c) => String(c.id) === String(claimId));
   if (!claim) return null;
 
-  claim.status = 'returned';
-  claim.returnStatus = 'completed';
-  claim.returnCompletedAt = new Date().toISOString();
-  claim.updatedAt = new Date().toISOString();
-  
-  item.status = 'resolved';
-  item.updatedAt = new Date().toISOString();
-  
-  await db.write();
-  return { claim, item };
+  const { run: run7 } = require('../db/sqlite');
+  const now7 = new Date().toISOString();
+  run7('UPDATE claims SET status=?, returnStatus=?, returnCompletedAt=?, updatedAt=? WHERE id=?',
+    ['returned', 'completed', now7, now7, String(claimId)]);
+  run7('UPDATE items SET status=?, updatedAt=? WHERE id=?', ['resolved', now7, Number(itemId)]);
+  return { ok: true };
 }
 
 async function getPendingReturnVerifications() {

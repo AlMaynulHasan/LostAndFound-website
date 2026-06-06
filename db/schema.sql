@@ -80,3 +80,11 @@ CREATE INDEX IF NOT EXISTS idx_claims_itemId ON claims(itemId);
 CREATE INDEX IF NOT EXISTS idx_claims_claimantId ON claims(claimantId);
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(senderId);
 CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipientId);
+
+-- Sessions table for express-session + better-sqlite3-session-store
+CREATE TABLE IF NOT EXISTS sessions (
+  sid TEXT PRIMARY KEY NOT NULL,
+  sess TEXT NOT NULL,
+  expired INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_expired ON sessions(expired);

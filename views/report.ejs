@@ -2,64 +2,74 @@
   <div class="col-lg-7">
     <div class="card shadow-sm reveal">
       <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <h2 class="card-title mb-2">Submit a Report</h2>
-            <p class="text-muted mb-4">
-              Share clear details so the right person can confirm a match quickly.
-            </p>
-          </div>
-          <span class="badge badge-soft">Step 1 of 2</span>
+
+        <!-- Type selector tabs -->
+        <div class="report-type-tabs mb-4">
+          <button type="button" class="report-tab <%= prefillType === 'lost' ? 'active' : '' %>" onclick="switchReportType('lost')">
+            <i class="bi bi-search me-2"></i>I Lost Something
+          </button>
+          <button type="button" class="report-tab <%= prefillType === 'found' ? 'active' : '' %>" onclick="switchReportType('found')">
+            <i class="bi bi-hand-thumbs-up me-2"></i>I Found Something
+          </button>
         </div>
-        <form
-          method="post"
-          action="/items/report"
-          enctype="multipart/form-data"
-        >
+
+        <!-- Dynamic heading -->
+        <div id="reportHeadingLost" class="report-heading <%= prefillType === 'found' ? 'd-none' : '' %>">
+          <h2 class="card-title mb-1">Report a Lost Item</h2>
+          <p class="text-muted mb-4">Describe your item clearly so finders can identify and return it.</p>
+        </div>
+        <div id="reportHeadingFound" class="report-heading <%= prefillType === 'lost' ? 'd-none' : '' %>">
+          <h2 class="card-title mb-1">Report a Found Item</h2>
+          <p class="text-muted mb-4">Help reunite this item with its owner by sharing where and when you found it.</p>
+        </div>
+
+        <form method="post" action="/items/report" enctype="multipart/form-data" id="reportForm">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Report type</label>
-              <select name="type" class="form-select" required>
-                <option value="lost" <%= prefillType === 'lost' ? 'selected' : '' %>>Lost</option>
-                <option value="found" <%= prefillType === 'found' ? 'selected' : '' %>>Found</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Category</label>
-              <select name="category" class="form-select" required>
-                <option value="Phone">Phone</option>
-                <option value="Wallet">Wallet</option>
-                <option value="Bag">Bag</option>
-                <option value="ID Card">ID Card</option>
-                <option value="Educational Tool">Educational Tool</option>
-                <option value="Books">Books</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Others">Others</option>
-              </select>
-            </div>
-          </div>
+          <input type="hidden" name="type" id="reportTypeInput" value="<%= prefillType %>" />
 
+          <!-- Category -->
           <div class="mb-3">
-            <label class="form-label">Item name</label>
-            <input type="text" name="name" class="form-control" required />
+            <label class="form-label">Category <span class="text-danger">*</span></label>
+            <select name="category" class="form-select" required>
+              <option value="">-- Select category --</option>
+              <option value="Phone">📱 Phone / Mobile</option>
+              <option value="Laptop">💻 Laptop / Tablet</option>
+              <option value="Electronics">🎧 Other Electronics</option>
+              <option value="Wallet">👛 Wallet / Purse</option>
+              <option value="Bag">🎒 Bag / Backpack</option>
+              <option value="ID Card">🪪 ID Card / Student Card</option>
+              <option value="Books">📚 Books / Notebook</option>
+              <option value="Keys">🔑 Keys</option>
+              <option value="Clothing">👕 Clothing / Accessories</option>
+              <option value="Water Bottle">💧 Water Bottle</option>
+              <option value="Glasses">👓 Glasses / Spectacles</option>
+              <option value="Educational Tool">📐 Educational Tools</option>
+              <option value="Others">❓ Others</option>
+            </select>
           </div>
 
+          <!-- Item name -->
+          <div class="mb-3">
+            <label class="form-label">Item name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" placeholder='e.g., "Black Samsung phone" or "Blue Nike bag"' required />
+          </div>
+
+          <!-- Description -->
           <div class="mb-3">
             <label class="form-label">Description</label>
-            <textarea
-              name="description"
-              class="form-control"
-              rows="4"
-              placeholder="Color, brand, unique stickers, or serial numbers"
-            ></textarea>
+            <textarea name="description" class="form-control" rows="3"
+              placeholder="Color, brand, model, unique markings, stickers, scratches..."></textarea>
           </div>
 
-          <div class="row g-3">
+          <!-- Location row -->
+          <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label">Location</label>
+              <label class="form-label" id="locationLabel">
+                <span id="locationLabelLost">Where did you lose it? <span class="text-danger">*</span></span>
+                <span id="locationLabelFound" class="d-none">Where did you find it? <span class="text-danger">*</span></span>
+              </label>
               <select name="location" class="form-select" required>
-                <option value="">-- Select a location --</option>
+                <option value="">-- Select location --</option>
                 <option value="Main Library">Main Library</option>
                 <option value="Cafeteria">Cafeteria</option>
                 <option value="Admin Block">Admin Block</option>
@@ -86,36 +96,36 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Date lost/found</label>
-              <input
-                type="date"
-                name="dateLost"
-                class="form-control"
-                required
-              />
+              <label class="form-label" id="dateLabel">
+                <span id="dateLabelLost">Date you lost it <span class="text-danger">*</span></span>
+                <span id="dateLabelFound" class="d-none">Date you found it <span class="text-danger">*</span></span>
+              </label>
+              <input type="date" name="dateLost" class="form-control" required max="<%= new Date().toISOString().split('T')[0] %>" />
             </div>
           </div>
 
+          <!-- Specific location details -->
           <div class="mb-3">
-            <label class="form-label">Specific Location Details <span class="text-muted">(e.g., Room 402, 3rd bench)</span></label>
-            <input
-              type="text"
-              name="locationDetails"
-              class="form-control"
-              placeholder="Additional details about where the item was lost/found"
-            />
+            <label class="form-label">Specific spot <span class="text-muted small">(optional)</span></label>
+            <input type="text" name="locationDetails" class="form-control"
+              placeholder='e.g., "Room 402, 3rd bench" or "Near the water dispenser"' />
           </div>
 
-          <div class="row g-3 mt-1">
+          <!-- Photo -->
+          <div class="mb-3">
+            <label class="form-label">Photo <span class="text-muted small">(optional but very helpful)</span></label>
+            <input type="file" name="photo" accept="image/*" class="form-control" id="photoInput" />
+            <img id="photoPreview" class="img-fluid mt-2 rounded d-none" alt="Preview" style="max-height:200px;object-fit:cover;" />
+          </div>
+
+          <!-- Contact -->
+          <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label">Contact method</label>
-              <input
-                type="text"
-                name="contactMethod"
-                class="form-control"
-                placeholder="Email or phone"
-                required
-              />
+              <label class="form-label" id="contactLabel">
+                <span id="contactLabelLost">Your contact <span class="text-danger">*</span></span>
+                <span id="contactLabelFound" class="d-none">Contact for pickup <span class="text-danger">*</span></span>
+              </label>
+              <input type="text" name="contactMethod" class="form-control" placeholder="Email or phone number" required />
             </div>
             <div class="col-md-6">
               <label class="form-label">Post as</label>
@@ -126,125 +136,179 @@
             </div>
           </div>
 
-          <div class="row g-3 mt-1">
+          <!-- Handover info — shown for FOUND, less prominent for LOST -->
+          <div class="row g-3 mb-4" id="handoverSection">
             <div class="col-md-6">
-              <label class="form-label">Return location/info</label>
-              <input
-                type="text"
-                name="returnInfo"
-                class="form-control"
-                placeholder="e.g., Security desk, Admin office"
-                required
-              />
+              <label class="form-label" id="returnInfoLabel">
+                <span id="returnInfoLost">Preferred handover location</span>
+                <span id="returnInfoFound" class="d-none">Where can owner pick it up? <span class="text-danger">*</span></span>
+              </label>
+              <input type="text" name="returnInfo" class="form-control"
+                id="returnInfoInput"
+                placeholder='e.g., "Security desk, Admin office"' />
             </div>
             <div class="col-md-6">
-              <label class="form-label">Who will return it?</label>
-              <input
-                type="text"
-                name="returnBy"
-                class="form-control"
-                placeholder="e.g., Campus Admin, Security Officer"
-                required
-              />
+              <label class="form-label">Who will handle the return?</label>
+              <input type="text" name="returnBy" class="form-control"
+                placeholder='e.g., "I will", "Security officer"' />
             </div>
           </div>
 
-          <div class="mb-3 mt-3">
-            <label class="form-label">Upload image</label>
-            <input
-              type="file"
-              name="photo"
-              accept="image/*"
-              class="form-control"
-              id="photoInput"
-            />
-            <img
-              id="photoPreview"
-              class="img-fluid mt-3 rounded d-none"
-              alt="Preview"
-            />
+          <!-- Verification questions — LOST only -->
+          <div id="verificationSection">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <h6 class="mb-0">Ownership verification questions</h6>
+              <span class="badge bg-danger-soft text-danger small" id="vqRequired">Required for Lost</span>
+              <span class="badge bg-success-soft text-success small d-none" id="vqOptional">Optional for Found</span>
+            </div>
+            <p class="text-muted small mb-3" id="vqHelp">
+              Set 3 questions only the real owner would know. Claimants must answer these to prove ownership.
+            </p>
+            <p class="text-muted small mb-3 d-none" id="vqHelpFound">
+              Optionally set questions to help verify the owner (e.g., "What's the brand?"). You can leave these blank if the item is easily identifiable.
+            </p>
+
+            <% for (let q = 1; q <= 3; q++) { %>
+            <div class="row g-2 mb-3 verify-q-row">
+              <div class="col-sm-6">
+                <label class="form-label small text-muted">Question <%= q %></label>
+                <input type="text" name="verifyQuestion<%= q %>" class="form-control form-control-sm vq-input"
+                  placeholder='e.g., "What color is the strap?"' />
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label small text-muted">Expected answer</label>
+                <input type="text" name="verifyAnswer<%= q %>" class="form-control form-control-sm va-input"
+                  placeholder="Answer..." />
+              </div>
+            </div>
+            <% } %>
           </div>
 
-          <div class="mt-4">
-            <h6 class="mb-2">Verification questions</h6>
-            <p class="text-muted small mb-3">Add 3 questions with expected answers so claimants can prove ownership.</p>
-            
-            <!-- Question 1 -->
-            <div class="row g-3 mb-3">
-              <div class="col-12">
-                <label class="form-label">Question 1</label>
-                <input type="text" name="verifyQuestion1" class="form-control" placeholder="e.g., What sticker is on the back?" required />
-              </div>
-              <div class="col-12">
-                <label class="form-label">Expected answer</label>
-                <input type="text" name="verifyAnswer1" class="form-control" placeholder="e.g., Blue star" required />
-              </div>
-            </div>
-
-            <!-- Question 2 -->
-            <div class="row g-3 mb-3">
-              <div class="col-12">
-                <label class="form-label">Question 2</label>
-                <input type="text" name="verifyQuestion2" class="form-control" placeholder="e.g., What brand is it?" required />
-              </div>
-              <div class="col-12">
-                <label class="form-label">Expected answer</label>
-                <input type="text" name="verifyAnswer2" class="form-control" placeholder="e.g., Samsung" required />
-              </div>
-            </div>
-
-            <!-- Question 3 -->
-            <div class="row g-3">
-              <div class="col-12">
-                <label class="form-label">Question 3</label>
-                <input type="text" name="verifyQuestion3" class="form-control" placeholder="e.g., What's the color?" required />
-              </div>
-              <div class="col-12">
-                <label class="form-label">Expected answer</label>
-                <input type="text" name="verifyAnswer3" class="form-control" placeholder="e.g., Black" required />
-              </div>
-            </div>
-          </div>
-
-          <button class="btn btn-primary w-100" type="submit">
-            <i class="bi bi-send me-2"></i>Submit Report
+          <button class="btn btn-primary w-100 mt-2" type="submit" id="reportSubmitBtn">
+            <i class="bi bi-send me-2"></i>
+            <span id="submitBtnText">Submit Lost Report</span>
           </button>
         </form>
       </div>
     </div>
   </div>
 
+  <!-- Sidebar tips -->
   <div class="col-lg-5">
     <div class="card sidebar-card p-4 reveal">
-      <h5 class="mb-3">Report tips</h5>
-      <ul class="list-unstyled d-grid gap-3">
+      <h5 class="mb-3" id="tipsTitle">Tips for Lost Reports</h5>
+      <ul class="list-unstyled d-grid gap-3" id="lostTips">
         <li class="d-flex gap-2">
-          <span class="tag"><i class="bi bi-check2-circle"></i></span>
-          <div>
-            <strong>Be specific</strong>
-            <p class="text-muted mb-0">Add colors, brands, and any unique markings.</p>
-          </div>
-        </li>
-        <li class="d-flex gap-2">
-          <span class="tag"><i class="bi bi-calendar-check"></i></span>
-          <div>
-            <strong>Include date &amp; location</strong>
-            <p class="text-muted mb-0">The closest match is often time-sensitive.</p>
+          <span class="tag"><i class="bi bi-pencil-square"></i></span>
+          <div><strong>Be very specific</strong>
+            <p class="text-muted mb-0">Unique marks, stickers, serial numbers help finders identify your item.</p>
           </div>
         </li>
         <li class="d-flex gap-2">
           <span class="tag"><i class="bi bi-shield-lock"></i></span>
-          <div>
-            <strong>Meet safely</strong>
-            <p class="text-muted mb-0">Arrange exchanges at campus security or public areas.</p>
+          <div><strong>Set good questions</strong>
+            <p class="text-muted mb-0">Questions only the real owner would know protect against false claims.</p>
+          </div>
+        </li>
+        <li class="d-flex gap-2">
+          <span class="tag"><i class="bi bi-bell"></i></span>
+          <div><strong>Check back often</strong>
+            <p class="text-muted mb-0">You'll get an email when someone claims your item.</p>
           </div>
         </li>
       </ul>
-      <div class="mt-4 p-3 rounded" style="background: rgba(26, 166, 160, 0.1);">
-        <strong class="d-block mb-1">AI match preview</strong>
-        <span class="text-muted">We will suggest likely matches after posting.</span>
-        <a href="/items/search" class="btn btn-outline-primary w-100 mt-3">Browse listings</a>
+      <ul class="list-unstyled d-grid gap-3 d-none" id="foundTips">
+        <li class="d-flex gap-2">
+          <span class="tag"><i class="bi bi-geo-alt"></i></span>
+          <div><strong>Be precise about location</strong>
+            <p class="text-muted mb-0">Exact spot helps the owner confirm it's theirs.</p>
+          </div>
+        </li>
+        <li class="d-flex gap-2">
+          <span class="tag"><i class="bi bi-camera"></i></span>
+          <div><strong>Upload a photo</strong>
+            <p class="text-muted mb-0">A clear photo speeds up the verification process significantly.</p>
+          </div>
+        </li>
+        <li class="d-flex gap-2">
+          <span class="tag"><i class="bi bi-shield-check"></i></span>
+          <div><strong>Keep it safe</strong>
+            <p class="text-muted mb-0">Store the item at the security desk or with a staff member.</p>
+          </div>
+        </li>
+      </ul>
+      <div class="mt-4 p-3 rounded" style="background: rgba(26,166,160,0.1);">
+        <strong class="d-block mb-1">Already posted?</strong>
+        <a href="/items/search" class="btn btn-outline-primary w-100 mt-2">Browse all listings</a>
+        <a href="/dashboard" class="btn btn-outline-secondary w-100 mt-2">My dashboard</a>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+function switchReportType(type) {
+  // Update hidden input
+  document.getElementById('reportTypeInput').value = type;
+
+  // Toggle tabs
+  document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+  event.target.closest('.report-tab').classList.add('active');
+
+  const isLost = type === 'lost';
+
+  // Headings
+  document.getElementById('reportHeadingLost').classList.toggle('d-none', !isLost);
+  document.getElementById('reportHeadingFound').classList.toggle('d-none', isLost);
+
+  // Labels
+  ['locationLabel','dateLabel','contactLabel','returnInfoLabel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.querySelectorAll('[id$="Lost"]').forEach(e => e.classList.toggle('d-none', !isLost));
+    el.querySelectorAll('[id$="Found"]').forEach(e => e.classList.toggle('d-none', isLost));
+  });
+
+  // Verification questions — required for lost, optional for found
+  document.querySelectorAll('.vq-input, .va-input').forEach(inp => {
+    inp.required = isLost;
+  });
+  document.getElementById('vqRequired').classList.toggle('d-none', !isLost);
+  document.getElementById('vqOptional').classList.toggle('d-none', isLost);
+  document.getElementById('vqHelp').classList.toggle('d-none', isLost);
+  document.getElementById('vqHelpFound').classList.toggle('d-none', !isLost);
+
+  // returnInfo required for found
+  document.getElementById('returnInfoInput').required = !isLost;
+
+  // Submit button text
+  document.getElementById('submitBtnText').textContent = isLost ? 'Submit Lost Report' : 'Submit Found Report';
+
+  // Tips
+  document.getElementById('tipsTitle').textContent = isLost ? 'Tips for Lost Reports' : 'Tips for Found Reports';
+  document.getElementById('lostTips').classList.toggle('d-none', !isLost);
+  document.getElementById('foundTips').classList.toggle('d-none', isLost);
+}
+
+// Init on load
+document.addEventListener('DOMContentLoaded', () => {
+  const type = document.getElementById('reportTypeInput').value || 'lost';
+  // Set required state correctly on load
+  const isLost = type === 'lost';
+  document.querySelectorAll('.vq-input, .va-input').forEach(inp => { inp.required = isLost; });
+  document.getElementById('returnInfoInput').required = !isLost;
+});
+
+// Photo preview
+document.getElementById('photoInput').addEventListener('change', function() {
+  const file = this.files[0];
+  const preview = document.getElementById('photoPreview');
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => { preview.src = e.target.result; preview.classList.remove('d-none'); };
+    reader.readAsDataURL(file);
+  } else {
+    preview.classList.add('d-none');
+  }
+});
+</script>

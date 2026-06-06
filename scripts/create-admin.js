@@ -1,57 +1,39 @@
+#!/usr/bin/env node
+/**
+ * One-time admin account creation script.
+ * Usage: node scripts/create-admin.js
+ */
+require('dotenv').config();
+const path = require('path');
 const bcrypt = require('bcryptjs');
-const { init, db } = require('../db');
 
-const SALT_ROUNDS = 12;
+// Init SQLite
+const { initSchema, get, run } = require('../db/sqlite');
+initSchema();
 
-async function createOrUpdateAdmin() {
-  await init();
-  await db.read();
+const email = process.env.ADMIN_EMAIL || 'admin@lostfound.com';
+const password = process.env.ADMIN_PASSWORD || 'Admin123';
+const name = process.env.ADMIN_NAME || 'Campus Admin';
+const studentId = process.env.ADMIN_STUDENT_ID || 'ADMIN-0001';
 
-  db.data = db.data || { users: [], items: [] };
+async function main() {
+  const hash = await bcrypt.hash(password, 12);
+  const now = new Date().toISOString();
 
-  const email = process.env.ADMIN_EMAIL;
-  const password = process.env.ADMIN_PASSWORD;
-  const name = process.env.ADMIN_NAME || 'Campus Admin';
-  const studentId = process.env.ADMIN_STUDENT_ID || 'ADMIN-0001';
-
-  if (!email || !password) {
-    throw new Error('Set ADMIN_EMAIL and ADMIN_PASSWORD in .env before running this script.');
-  }
-
-  const existing = (db.data.users || []).find((u) => u.email === email);
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-
+  const existing = get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
   if (existing) {
-    existing.name = name;
-    existing.studentId = studentId;
-    existing.role = 'admin';
-    if (process.env.ADMIN_PASSWORD) {
-      existing.passwordHash = passwordHash;
-    }
-    await db.write();
-    console.log(`Updated admin account: ${email}`);
-    return;
+    run('UPDATE users SET passwordHash = ?, role = ?, name = ?, updatedAt = ? WHERE email = ?',
+      [hash, 'admin', name, now, email.toLowerCase()]);
+    console.log(`✅ Admin updated: ${email}`);
+  } else {
+    const maxRow = get('SELECT MAX(CAST(id AS INTEGER)) AS m FROM users');
+    const id = String((maxRow?.m || 0) + 1);
+    run('INSERT INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt) VALUES (?,?,?,?,?,?,?,?)',
+      [id, email.toLowerCase(), studentId, name, hash, 'admin', now, now]);
+    console.log(`✅ Admin created: ${email}`);
   }
-
-  const id = db.data.users.length
-    ? Math.max(...db.data.users.map((row) => row.id || 0)) + 1
-    : 1;
-
-  db.data.users.push({
-    id,
-    email,
-    studentId,
-    name,
-    passwordHash,
-    role: 'admin',
-    createdAt: new Date().toISOString(),
-  });
-
-  await db.write();
-  console.log(`Created admin account: ${email}`);
+  console.log(`   Login at /auth/login with password: ${password}`);
+  process.exit(0);
 }
 
-createOrUpdateAdmin().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main().catch(err => { console.error('❌ Error:', err.message); process.exit(1); });

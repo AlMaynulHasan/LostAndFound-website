@@ -134,9 +134,10 @@ router.post('/report', requireLogin, upload.single('photo'), async (req, res) =>
   ].filter((entry) => entry.question && entry.answer);
 
   try {
-    if (verificationQuestions.length < 3) {
-      req.flash('error', 'Please provide all 3 verification questions with answers.');
-      return res.redirect('/items/report');
+    // Verification questions: required for 'lost', optional for 'found'
+    if (type === 'lost' && verificationQuestions.length < 1) {
+      req.flash('error', 'Please provide at least one verification question so claimants can prove ownership.');
+      return res.redirect('/items/report?type=lost');
     }
 
     await itemModel.createItem({
@@ -333,8 +334,10 @@ router.post('/:id/claim', requireLogin, upload.single('proof'), async (req, res)
     }
   }
   const proofPath = req.file ? getFilePath(req.file) : null;
-  if (!description && !proofPath) {
-    req.flash('error', 'Please provide a description or upload a proof photo.');
+  // For lost items (claiming ownership), require description or proof
+  // For found items, the claimant is the owner — answers alone may suffice
+  if (item.type === 'lost' && !description && !proofPath && claimantAnswers.filter(Boolean).length === 0) {
+    req.flash('error', 'Please provide answers, a description, or a proof photo to submit your claim.');
     return res.redirect(`/items/${item.id}`);
   }
 
