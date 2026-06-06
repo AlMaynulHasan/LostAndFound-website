@@ -8,6 +8,7 @@ if (typeof util.isArray === 'function') {
 
 const path = require('path');
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const flash = require('connect-flash');
@@ -93,6 +94,7 @@ if (process.env.NODE_ENV === 'production' && require('fs').existsSync('/data/upl
 }
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(cookieParser(process.env.SESSION_SECRET || 'campus-lost-found-secret'));
 
 app.use(
   session({
@@ -189,30 +191,41 @@ app.get('/setup-admin', async (req, res) => {
   }
 });
 
-// Simple CSRF protection — generate token per session, validate on POST
+// CSRF protection using signed cookies (works without session persistence)
 const { randomBytes } = require('crypto');
 
 app.use((req, res, next) => {
-  // Generate token if session doesn't have one
-  if (!req.session.csrfToken) {
-    req.session.csrfToken = randomBytes(32).toString('hex');
+  // Read token from signed cookie, or generate a new one
+  let token = req.signedCookies && req.signedCookies._csrft;
+  if (!token) {
+    token = randomBytes(32).toString('hex');
+    res.cookie('_csrft', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isProductionLike,
+      signed: true,
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+    });
   }
-  res.locals.csrfToken = req.session.csrfToken;
+  res.locals.csrfToken = token;
+  req._csrfToken = token;
   next();
 });
 
-// Validate CSRF token on state-changing requests
-// Skip multipart/form-data — multer parses body per-route, _csrf not available here
+// Validate CSRF on state-changing requests
+// Skip multipart/form-data — multer parses body per-route
 app.use((req, res, next) => {
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
     const contentType = req.headers['content-type'] || '';
     if (contentType.includes('multipart/form-data')) return next();
-    const token = req.body._csrf || req.headers['x-csrf-token'] || '';
-    const sessionToken = req.session.csrfToken || '';
-    if (!token || !sessionToken || token !== sessionToken) {
+    const bodyToken = req.body && req.body._csrf;
+    const headerToken = req.headers['x-csrf-token'];
+    const submitted = bodyToken || headerToken || '';
+    const expected = req._csrfToken || '';
+    if (!submitted || !expected || submitted !== expected) {
       return res.status(403).render('403', {
         title: 'Forbidden',
-        message: 'Invalid or missing CSRF token. Please go back and try again.'
+        message: 'Invalid or missing CSRF token. Please go back and try again.',
       });
     }
   }
