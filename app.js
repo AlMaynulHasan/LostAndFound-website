@@ -46,12 +46,7 @@ const isProductionLike =
   process.env.VERCEL_ENV === 'production' ||
   process.env.VERCEL_ENV === 'preview';
 
-init().catch((err) => {
-  console.error('Failed to initialize database', err);
-  if (!isServerless) {
-    process.exit(1);
-  }
-});
+// DB init happens before server starts (see bottom of file)
 
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
@@ -270,7 +265,12 @@ function startServer(startPort, maxAttempts = 10) {
 }
 
 if (!isServerless && require.main === module) {
-  startServer(PORT);
+  init()
+    .then(() => startServer(PORT))
+    .catch((err) => {
+      console.error('❌ Failed to initialize database:', err);
+      process.exit(1);
+    });
 }
 
 module.exports = app;
