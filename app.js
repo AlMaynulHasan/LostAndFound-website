@@ -17,6 +17,8 @@ const csrf = require('csurf');
 const rateLimit = require('express-rate-limit');
 
 const { init } = require('./db');
+const { sqlite } = require('./db/sqlite');
+const SqliteStore = require('better-sqlite3-session-store')(session);
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
 const indexRoutes = require('./routes/index');
@@ -89,6 +91,7 @@ app.use(bodyParser.json());
 
 app.use(
   session({
+    store: new SqliteStore({ client: sqlite }),
     secret: process.env.SESSION_SECRET || 'campus-lost-found-secret',
     resave: false,
     saveUninitialized: false,

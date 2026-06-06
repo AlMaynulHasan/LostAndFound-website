@@ -190,6 +190,31 @@ function hydrateItems(items) {
 async function init() {
   initSchema();
   importJsonIfEmpty();
+  await ensureAdminExists();
+}
+
+async function ensureAdminExists() {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+  const name = process.env.ADMIN_NAME || 'Campus Admin';
+  const studentId = process.env.ADMIN_STUDENT_ID || 'ADMIN-0001';
+
+  if (!email || !password) return; // skip if not configured
+
+  const existing = get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
+  if (existing) return; // already exists
+
+  const bcrypt = require('bcryptjs');
+  const passwordHash = await bcrypt.hash(password, 12);
+  const now = new Date().toISOString();
+  const id = String((get('SELECT MAX(CAST(id AS INTEGER)) AS maxId FROM users')?.maxId || 0) + 1);
+
+  run(
+    `INSERT INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, 'admin', ?, ?)`,
+    [id, email.toLowerCase(), studentId, name, passwordHash, now, now]
+  );
+  console.log(`[INIT] Admin account created: ${email}`);
 }
 
 const db = {
