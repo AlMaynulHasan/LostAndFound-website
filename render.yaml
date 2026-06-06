@@ -37,3 +37,7 @@ services:
         value: ADMIN-0001
       - key: APP_URL
         sync: false
+      - key: TURSO_DATABASE_URL
+        value: libsql://lost2found-almaynulhasan.aws-ap-south-1.turso.io
+      - key: TURSO_AUTH_TOKEN
+        sync: false

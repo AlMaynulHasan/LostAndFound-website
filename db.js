@@ -49,6 +49,16 @@ function rowToMessage(row) {
   };
 }
 
+async function insertUserAsync(user) {
+  await run(
+    `INSERT OR IGNORE INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [String(user.id), user.email, user.studentId || null, user.name,
+     user.passwordHash || user.password, user.role || 'user',
+     user.createdAt || new Date().toISOString(), user.updatedAt || null]
+  );
+}
+
 function insertUser(user) {
   run(
     `INSERT OR REPLACE INTO users
@@ -64,6 +74,24 @@ function insertUser(user) {
       user.createdAt || new Date().toISOString(),
       user.updatedAt || user.createdAt || new Date().toISOString(),
     ]
+  );
+}
+
+async function insertItemAsync(item) {
+  await run(
+    `INSERT OR IGNORE INTO items
+      (id, userId, ownerEmail, type, title, name, description, location, locationDetails, dateLost,
+       category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy, status,
+       verificationQuestions, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [Number(item.id), item.userId ? String(item.userId) : null, item.ownerEmail || null,
+     item.type || 'lost', item.title || item.name || null, item.name || 'Untitled',
+     item.description || null, item.location || null, item.locationDetails || null,
+     item.dateLost || null, item.category || null, item.contactMethod || null,
+     item.anonymous ? 1 : 0, item.reportedByName || null, item.photoPath || null,
+     item.returnInfo || null, item.returnBy || null, item.status || 'reported',
+     stringifyJson(item.verificationQuestions || []),
+     item.createdAt || new Date().toISOString(), item.updatedAt || null]
   );
 }
 
@@ -157,19 +185,20 @@ function insertMessage(message) {
   );
 }
 
-function importJsonIfEmpty() {
-  const userCount = get('SELECT COUNT(*) AS count FROM users').count;
-  const itemCount = get('SELECT COUNT(*) AS count FROM items').count;
-  const messageCount = get('SELECT COUNT(*) AS count FROM messages').count;
-  if (userCount || itemCount || messageCount || !fs.existsSync(jsonDbFile)) return;
+async function importJsonIfEmptyAsync() {
+  const userRow = await get('SELECT COUNT(*) AS count FROM users');
+  const itemRow = await get('SELECT COUNT(*) AS count FROM items');
+  if ((userRow?.count || 0) > 0 || (itemRow?.count || 0) > 0) return;
+  if (!fs.existsSync(jsonDbFile)) return;
 
-  const parsed = JSON.parse(fs.readFileSync(jsonDbFile, 'utf8'));
-  const importData = transaction((data) => {
-    (data.users || []).forEach(insertUser);
-    (data.items || []).forEach(insertItem);
-    (data.messages || []).forEach(insertMessage);
-  });
-  importData(parsed);
+  try {
+    const parsed = JSON.parse(fs.readFileSync(jsonDbFile, 'utf8'));
+    for (const user of (parsed.users || [])) await insertUserAsync(user);
+    for (const item of (parsed.items || [])) await insertItemAsync(item);
+    console.log('[DB] Imported legacy JSON data into SQLite/Turso');
+  } catch(e) {
+    console.warn('[DB] Could not import legacy JSON:', e.message);
+  }
 }
 
 function hydrateItems(items) {
@@ -188,8 +217,8 @@ function hydrateItems(items) {
 }
 
 async function init() {
-  initSchema();
-  importJsonIfEmpty();
+  await initSchema();
+  await importJsonIfEmptyAsync();
   await ensureAdminExists();
 }
 
@@ -201,15 +230,16 @@ async function ensureAdminExists() {
 
   if (!email || !password) return; // skip if not configured
 
-  const existing = get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
+  const existing = await get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
   if (existing) return; // already exists
 
   const bcrypt = require('bcryptjs');
   const passwordHash = await bcrypt.hash(password, 12);
   const now = new Date().toISOString();
-  const id = String((get('SELECT MAX(CAST(id AS INTEGER)) AS maxId FROM users')?.maxId || 0) + 1);
+  const maxRow = await get('SELECT MAX(CAST(id AS INTEGER)) AS maxId FROM users');
+  const id = String((maxRow?.maxId || 0) + 1);
 
-  run(
+  await run(
     `INSERT INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?, 'admin', ?, ?)`,
     [id, email.toLowerCase(), studentId, name, passwordHash, now, now]
@@ -220,9 +250,27 @@ async function ensureAdminExists() {
 const db = {
   data: { users: [], items: [], messages: [] },
   async read() {
-    const users = all('SELECT * FROM users ORDER BY CAST(id AS INTEGER), id').map(rowToUser);
-    const items = hydrateItems(all('SELECT * FROM items ORDER BY datetime(createdAt) DESC').map(rowToItem));
-    const messages = all('SELECT * FROM messages ORDER BY datetime(createdAt) ASC').map(rowToMessage);
+    const userRows = await all('SELECT * FROM users ORDER BY CAST(id AS INTEGER), id');
+    const itemRows = await all('SELECT * FROM items ORDER BY datetime(createdAt) DESC');
+    const claimRows = await all('SELECT * FROM claims ORDER BY datetime(createdAt) ASC');
+    const messageRows = await all('SELECT * FROM messages ORDER BY datetime(createdAt) ASC');
+
+    const users = userRows.map(rowToUser);
+    const messages = messageRows.map(rowToMessage);
+
+    // Hydrate items with claims
+    const claimsByItem = new Map();
+    claimRows.forEach(row => {
+      const claim = rowToClaim(row);
+      const key = Number(claim.itemId);
+      if (!claimsByItem.has(key)) claimsByItem.set(key, []);
+      claimsByItem.get(key).push(claim);
+    });
+    const items = itemRows.map(rowToItem).map(item => ({
+      ...item,
+      claims: claimsByItem.get(Number(item.id)) || [],
+    }));
+
     this.data = { users, items, messages };
   },
   async write() {
@@ -304,6 +352,7 @@ const db = {
     })();
     syncItems(this.data.items || []);
   },
+  
 };
 
 module.exports = {
