@@ -112,7 +112,7 @@ app.use(
 );
 
 // CSRF protection middleware
-const csrfProtection = csrf({ cookie: true });
+const csrfProtection = csrf({ cookie: false });
 app.use(csrfProtection);
 
 app.use(flash());
