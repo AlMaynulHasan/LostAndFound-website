@@ -2,7 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const dataDir = path.join(__dirname, '..', 'data');
+// Use Render's persistent disk (/data) in production, local ./data otherwise
+const dataDir = process.env.NODE_ENV === 'production' && require('fs').existsSync('/data')
+  ? '/data'
+  : path.join(__dirname, '..', 'data');
 const dbFile = path.join(dataDir, 'lost2found.sqlite');
 const schemaFile = path.join(__dirname, 'schema.sql');
 

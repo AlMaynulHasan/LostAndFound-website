@@ -4,6 +4,10 @@ services:
     env: node
     buildCommand: npm install
     startCommand: node app.js
+    disk:
+      name: lost2found-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production

@@ -92,6 +92,10 @@ const authLimiter = rateLimit({
 app.use(globalLimiter);
 
 app.use(express.static(path.join(__dirname, 'public')));
+// Serve uploads from persistent disk on Render
+if (process.env.NODE_ENV === 'production' && require('fs').existsSync('/data/uploads')) {
+  app.use('/uploads', express.static('/data/uploads'));
+}
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 

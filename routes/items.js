@@ -26,7 +26,10 @@ if (cloudinary.isConfigured) {
   });
   getFilePath = (file) => file.path; // Cloudinary returns full URL
 } else {
-  const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+  // Use persistent disk on Render, local public/uploads otherwise
+  const uploadDir = process.env.NODE_ENV === 'production' && require('fs').existsSync('/data')
+    ? '/data/uploads'
+    : path.join(__dirname, '..', 'public', 'uploads');
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
   storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
