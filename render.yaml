@@ -7,18 +7,18 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: SESSION_SECRET
-        generateValue: true
       - key: PORT
         value: 3000
+      - key: SESSION_SECRET
+        generateValue: true
       - key: CLOUDINARY_CLOUD_NAME
-        sync: false
+        value: dsjvyjitj
       - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false
+        value: 861811256413455
       - key: CLOUDINARY_FOLDER
         value: lost2found
+      - key: CLOUDINARY_API_SECRET
+        sync: false
       - key: MAIL_USER
         sync: false
       - key: MAIL_PASS
@@ -30,4 +30,6 @@ services:
       - key: ADMIN_NAME
         sync: false
       - key: ADMIN_STUDENT_ID
+        value: ADMIN-0001
+      - key: APP_URL
         sync: false

@@ -6,29 +6,43 @@ const itemModel = require('../models/item');
 const messageModel = require('../models/message');
 const mailer = require('../services/mailer');
 const { getFeaturedItem } = require('../data/featured-items');
+const cloudinary = require('../services/cloudinary');
 
 const router = express.Router();
 
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// Use Cloudinary storage if configured, otherwise fall back to local disk
+let storage;
+let getFilePath;
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const name = `${Date.now()}-${file.originalname}`;
-    cb(null, name);
-  },
-});
+if (cloudinary.isConfigured) {
+  const { CloudinaryStorage } = require('multer-storage-cloudinary');
+  storage = new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: process.env.CLOUDINARY_FOLDER || 'lost2found',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+      transformation: [{ width: 800, crop: 'limit', quality: 'auto', fetch_format: 'auto' }],
+    },
+  });
+  getFilePath = (file) => file.path; // Cloudinary returns full URL
+} else {
+  const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+  storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir),
+    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+  });
+  getFilePath = (file) => `/uploads/${file.filename}`; // Local relative path
+}
 
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     const filetypes = /jpeg|jpg|png|webp/;
-    const mimetype = filetypes.test(file.mimetype);
-    if (mimetype) return cb(null, true);
+    if (filetypes.test(file.mimetype)) return cb(null, true);
     cb(new Error('Only images (jpeg, jpg, png, webp) are allowed!'));
-  }
+  },
 });
 
 function requireLogin(req, res, next) {
@@ -112,7 +126,7 @@ router.post('/report', requireLogin, upload.single('photo'), async (req, res) =>
     verifyQuestion3,
     verifyAnswer3,
   } = req.body;
-  const photoPath = req.file ? `/uploads/${req.file.filename}` : null;
+  const photoPath = req.file ? getFilePath(req.file) : null;
   const verificationQuestions = [
     { question: (verifyQuestion1 || '').trim(), answer: (verifyAnswer1 || '').trim() },
     { question: (verifyQuestion2 || '').trim(), answer: (verifyAnswer2 || '').trim() },
@@ -317,7 +331,7 @@ router.post('/:id/claim', requireLogin, upload.single('proof'), async (req, res)
       return res.redirect(`/items/${item.id}`);
     }
   }
-  const proofPath = req.file ? `/uploads/${req.file.filename}` : null;
+  const proofPath = req.file ? getFilePath(req.file) : null;
   if (!description && !proofPath) {
     req.flash('error', 'Please provide a description or upload a proof photo.');
     return res.redirect(`/items/${item.id}`);
@@ -625,7 +639,7 @@ router.post('/:id/update', requireLogin, upload.single('photo'), async (req, res
     anonymous,
   } = req.body;
 
-  const photoPath = req.file ? `/uploads/${req.file.filename}` : item.photoPath;
+  const photoPath = req.file ? getFilePath(req.file) : item.photoPath;
 
   await itemModel.updateItem(req.params.id, {
     type,
