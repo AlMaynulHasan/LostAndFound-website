@@ -573,12 +573,18 @@ router.get('/:id', async (req, res) => {
   const item = await itemModel.findById(req.params.id);
   if (!item) return res.status(404).render('404', { title: 'Not Found' });
   const isOwner = req.session.user && String(req.session.user.id) === String(item.userId);
-  const matches = await itemModel.findSimilarItems(item, 3);
+
+  // Check if there's an accepted claim (for showing Mark as Returned)
+  const claims = item.claims || [];
+  const hasAcceptedClaim = claims.some(cl => cl.status === 'accepted');
+  const hasPendingClaim = claims.some(cl => cl.status === 'pending');
+
   res.render('item', { 
     title: item.name, 
     item, 
-    isOwner, 
-    matches, 
+    isOwner,
+    hasAcceptedClaim,
+    hasPendingClaim,
     currentUser: req.session.user || null,
     editMode: req.query.edit === 'true'
   });
