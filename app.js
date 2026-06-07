@@ -17,15 +17,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const { init } = require('./db');
-let SqliteStore = null;
-let sqliteClient = null;
-try {
-  const { sqlite } = require('./db/sqlite');
-  SqliteStore = require('better-sqlite3-session-store')(session);
-  sqliteClient = sqlite;
-} catch (e) {
-  console.warn('[SESSION] SQLite session store unavailable, using MemoryStore:', e.message);
-}
+const TursoSessionStore = require('./services/tursoSessionStore');
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
 const indexRoutes = require('./routes/index');
@@ -98,7 +90,7 @@ app.use(cookieParser(process.env.SESSION_SECRET || 'campus-lost-found-secret'));
 
 app.use(
   session({
-    ...(SqliteStore && sqliteClient ? { store: new SqliteStore({ client: sqliteClient }) } : {}),
+    store: new TursoSessionStore({ ttl: 60 * 60 * 24 * 14 }),
     secret: process.env.SESSION_SECRET || 'campus-lost-found-secret',
     resave: false,
     saveUninitialized: false,
