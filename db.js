@@ -5,16 +5,13 @@ const {
   get,
   all,
   run,
-  transaction,
-  stringifyJson,
   parseJson,
+  stringifyJson,
 } = require('./db/sqlite');
 
 const jsonDbFile = path.join(__dirname, 'data', 'db.json');
 
-function normalizeId(id) {
-  return id === undefined || id === null ? null : String(id);
-}
+// ── Row mappers ────────────────────────────────────────────────────────────
 
 function rowToUser(row) {
   if (!row) return null;
@@ -27,7 +24,7 @@ function rowToClaim(row) {
     ...row,
     answers: parseJson(row.answers, []),
     score: parseJson(row.score, null),
-    seenByClaimant: row.seenByClaimant === 1,
+    seenByClaimant: row.seenByClaimant === 1 || row.seenByClaimant === true,
   };
 }
 
@@ -35,7 +32,8 @@ function rowToItem(row) {
   if (!row) return null;
   return {
     ...row,
-    anonymous: row.anonymous === 1,
+    id: Number(row.id),
+    anonymous: row.anonymous === 1 || row.anonymous === true,
     verificationQuestions: parseJson(row.verificationQuestions, []),
     claims: [],
   };
@@ -45,145 +43,11 @@ function rowToMessage(row) {
   if (!row) return null;
   return {
     ...row,
-    readByRecipient: row.readByRecipient === 1,
+    readByRecipient: row.readByRecipient === 1 || row.readByRecipient === true,
   };
 }
 
-async function insertUserAsync(user) {
-  await run(
-    `INSERT OR IGNORE INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [String(user.id), user.email, user.studentId || null, user.name,
-     user.passwordHash || user.password, user.role || 'user',
-     user.createdAt || new Date().toISOString(), user.updatedAt || null]
-  );
-}
-
-function insertUser(user) {
-  run(
-    `INSERT OR REPLACE INTO users
-      (id, email, studentId, name, passwordHash, role, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      normalizeId(user.id),
-      (user.email || '').toLowerCase().trim(),
-      user.studentId || null,
-      user.name || 'User',
-      user.passwordHash,
-      user.role || 'user',
-      user.createdAt || new Date().toISOString(),
-      user.updatedAt || user.createdAt || new Date().toISOString(),
-    ]
-  );
-}
-
-async function insertItemAsync(item) {
-  await run(
-    `INSERT OR IGNORE INTO items
-      (id, userId, ownerEmail, type, title, name, description, location, locationDetails, dateLost,
-       category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy, status,
-       verificationQuestions, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [Number(item.id), item.userId ? String(item.userId) : null, item.ownerEmail || null,
-     item.type || 'lost', item.title || item.name || null, item.name || 'Untitled',
-     item.description || null, item.location || null, item.locationDetails || null,
-     item.dateLost || null, item.category || null, item.contactMethod || null,
-     item.anonymous ? 1 : 0, item.reportedByName || null, item.photoPath || null,
-     item.returnInfo || null, item.returnBy || null, item.status || 'reported',
-     stringifyJson(item.verificationQuestions || []),
-     item.createdAt || new Date().toISOString(), item.updatedAt || null]
-  );
-}
-
-function insertItem(item) {
-  run(
-    `INSERT OR REPLACE INTO items
-      (id, userId, ownerEmail, type, title, name, description, location, locationDetails, dateLost,
-       category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy, status,
-       verificationQuestions, returnAdminConfirmedAt, returnAdminConfirmedBy, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      Number(item.id),
-      normalizeId(item.userId),
-      item.ownerEmail || null,
-      item.type || 'lost',
-      item.title || item.name || null,
-      item.name || 'Untitled item',
-      item.description || null,
-      item.location || null,
-      item.locationDetails || null,
-      item.dateLost || null,
-      item.category || null,
-      item.contactMethod || null,
-      item.anonymous ? 1 : 0,
-      item.reportedByName || null,
-      item.photoPath || null,
-      item.returnInfo || null,
-      item.returnBy || null,
-      item.status || 'reported',
-      stringifyJson(item.verificationQuestions || []),
-      item.returnAdminConfirmedAt || null,
-      item.returnAdminConfirmedBy || null,
-      item.createdAt || new Date().toISOString(),
-      item.updatedAt || null,
-    ]
-  );
-
-  (item.claims || []).forEach((claim) => insertClaim(item.id, claim));
-}
-
-function insertClaim(itemId, claim) {
-  run(
-    `INSERT OR REPLACE INTO claims
-      (id, itemId, claimantId, claimantName, claimantEmail, description, claimedDate, proofPath, status,
-       answers, score, seenByClaimant, returnStatus, acceptedAt, returnWindowEndsAt, returnDueAt,
-       verificationCode, returnRequestedAt, returnCompletedAt, returnReminderSentAt, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      normalizeId(claim.id),
-      Number(itemId),
-      normalizeId(claim.claimantId),
-      claim.claimantName || null,
-      claim.claimantEmail || null,
-      claim.description || null,
-      claim.claimedDate || null,
-      claim.proofPath || null,
-      claim.status || 'pending',
-      stringifyJson(claim.answers || []),
-      stringifyJson(claim.score || null),
-      claim.seenByClaimant === false ? 0 : 1,
-      claim.returnStatus || null,
-      claim.acceptedAt || null,
-      claim.returnWindowEndsAt || null,
-      claim.returnDueAt || null,
-      claim.verificationCode || null,
-      claim.returnRequestedAt || null,
-      claim.returnCompletedAt || null,
-      claim.returnReminderSentAt || null,
-      claim.createdAt || new Date().toISOString(),
-      claim.updatedAt || null,
-    ]
-  );
-}
-
-function insertMessage(message) {
-  run(
-    `INSERT OR REPLACE INTO messages
-      (id, senderId, senderName, recipientId, recipientName, content, readByRecipient, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      normalizeId(message.id),
-      normalizeId(message.senderId),
-      message.senderName || null,
-      normalizeId(message.recipientId),
-      message.recipientName || null,
-      message.content || '',
-      message.readByRecipient ? 1 : 0,
-      message.createdAt || new Date().toISOString(),
-      message.updatedAt || null,
-    ]
-  );
-}
+// ── Legacy JSON import ─────────────────────────────────────────────────────
 
 async function importJsonIfEmptyAsync() {
   const userRow = await get('SELECT COUNT(*) AS count FROM users');
@@ -193,45 +57,49 @@ async function importJsonIfEmptyAsync() {
 
   try {
     const parsed = JSON.parse(fs.readFileSync(jsonDbFile, 'utf8'));
-    for (const user of (parsed.users || [])) await insertUserAsync(user);
-    for (const item of (parsed.items || [])) await insertItemAsync(item);
-    console.log('[DB] Imported legacy JSON data into SQLite/Turso');
-  } catch(e) {
+    for (const user of (parsed.users || [])) {
+      await run(
+        `INSERT OR IGNORE INTO users (id, email, studentId, name, passwordHash, role, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [String(user.id), user.email, user.studentId || null, user.name,
+         user.passwordHash || user.password || '', user.role || 'user',
+         user.createdAt || new Date().toISOString(), user.updatedAt || null]
+      );
+    }
+    for (const item of (parsed.items || [])) {
+      await run(
+        `INSERT OR IGNORE INTO items
+          (id, userId, ownerEmail, type, name, description, location, locationDetails, dateLost,
+           category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy,
+           status, verificationQuestions, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [Number(item.id), item.userId ? String(item.userId) : null, item.ownerEmail || null,
+         item.type || 'lost', item.name || 'Untitled', item.description || null,
+         item.location || null, item.locationDetails || null, item.dateLost || null,
+         item.category || null, item.contactMethod || null, item.anonymous ? 1 : 0,
+         item.reportedByName || null, item.photoPath || null,
+         item.returnInfo || null, item.returnBy || null, item.status || 'reported',
+         stringifyJson(item.verificationQuestions || []),
+         item.createdAt || new Date().toISOString(), item.updatedAt || null]
+      );
+    }
+    console.log('[DB] Imported legacy JSON data');
+  } catch (e) {
     console.warn('[DB] Could not import legacy JSON:', e.message);
   }
 }
 
-function hydrateItems(items) {
-  const claims = all('SELECT * FROM claims ORDER BY datetime(createdAt) ASC');
-  const byItem = new Map();
-  claims.forEach((claimRow) => {
-    const claim = rowToClaim(claimRow);
-    const key = Number(claim.itemId);
-    if (!byItem.has(key)) byItem.set(key, []);
-    byItem.get(key).push(claim);
-  });
-  return items.map((item) => ({
-    ...item,
-    claims: byItem.get(Number(item.id)) || [],
-  }));
-}
-
-async function init() {
-  await initSchema();
-  await importJsonIfEmptyAsync();
-  await ensureAdminExists();
-}
+// ── Admin bootstrap ────────────────────────────────────────────────────────
 
 async function ensureAdminExists() {
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
   const name = process.env.ADMIN_NAME || 'Campus Admin';
   const studentId = process.env.ADMIN_STUDENT_ID || 'ADMIN-0001';
-
-  if (!email || !password) return; // skip if not configured
+  if (!email || !password) return;
 
   const existing = await get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
-  if (existing) return; // already exists
+  if (existing) return;
 
   const bcrypt = require('bcryptjs');
   const passwordHash = await bcrypt.hash(password, 12);
@@ -247,115 +115,87 @@ async function ensureAdminExists() {
   console.log(`[INIT] Admin account created: ${email}`);
 }
 
+// ── In-memory db object (used by models that call db.read() / db.write()) ─
+
 const db = {
   data: { users: [], items: [], messages: [] },
+
   async read() {
-    const userRows = await all('SELECT * FROM users ORDER BY CAST(id AS INTEGER), id');
-    const itemRows = await all('SELECT * FROM items ORDER BY datetime(createdAt) DESC');
+    const userRows  = await all('SELECT * FROM users ORDER BY CAST(id AS INTEGER), id');
+    const itemRows  = await all('SELECT * FROM items ORDER BY datetime(createdAt) DESC');
     const claimRows = await all('SELECT * FROM claims ORDER BY datetime(createdAt) ASC');
-    const messageRows = await all('SELECT * FROM messages ORDER BY datetime(createdAt) ASC');
+    const msgRows   = await all('SELECT * FROM messages ORDER BY datetime(createdAt) ASC');
 
-    const users = userRows.map(rowToUser);
-    const messages = messageRows.map(rowToMessage);
-
-    // Hydrate items with claims
     const claimsByItem = new Map();
-    claimRows.forEach(row => {
-      const claim = rowToClaim(row);
+    claimRows.map(rowToClaim).forEach(claim => {
       const key = Number(claim.itemId);
       if (!claimsByItem.has(key)) claimsByItem.set(key, []);
       claimsByItem.get(key).push(claim);
     });
-    const items = itemRows.map(rowToItem).map(item => ({
-      ...item,
-      claims: claimsByItem.get(Number(item.id)) || [],
-    }));
 
-    this.data = { users, items, messages };
+    this.data = {
+      users: userRows.map(rowToUser),
+      messages: msgRows.map(rowToMessage),
+      items: itemRows.map(rowToItem).map(item => ({
+        ...item,
+        claims: claimsByItem.get(Number(item.id)) || [],
+      })),
+    };
   },
+
   async write() {
-    // Sync in-memory data back to SQLite
-    const { insertItem, insertClaim } = (() => {
-      // Inline the sync logic using the existing insert functions
-      const syncItems = transaction((items) => {
-        run('DELETE FROM items');
-        run('DELETE FROM claims');
-        items.forEach((item) => {
-          run(
-            `INSERT OR REPLACE INTO items
-              (id, userId, ownerEmail, type, title, name, description, location, locationDetails, dateLost,
-               category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy, status,
-               verificationQuestions, returnAdminConfirmedAt, returnAdminConfirmedBy, createdAt, updatedAt)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              Number(item.id),
-              item.userId ? String(item.userId) : null,
-              item.ownerEmail || null,
-              item.type || 'lost',
-              item.title || item.name || null,
-              item.name || 'Untitled',
-              item.description || null,
-              item.location || null,
-              item.locationDetails || null,
-              item.dateLost || null,
-              item.category || null,
-              item.contactMethod || null,
-              item.anonymous ? 1 : 0,
-              item.reportedByName || null,
-              item.photoPath || null,
-              item.returnInfo || null,
-              item.returnBy || null,
-              item.status || 'reported',
-              stringifyJson(item.verificationQuestions || []),
-              item.returnAdminConfirmedAt || null,
-              item.returnAdminConfirmedBy || null,
-              item.createdAt || new Date().toISOString(),
-              item.updatedAt || null,
-            ]
-          );
-          (item.claims || []).forEach((claim) => {
-            run(
-              `INSERT OR REPLACE INTO claims
-                (id, itemId, claimantId, claimantName, claimantEmail, description, claimedDate, proofPath, status,
-                 answers, score, seenByClaimant, returnStatus, acceptedAt, returnWindowEndsAt, returnDueAt,
-                 verificationCode, returnRequestedAt, returnCompletedAt, returnReminderSentAt, createdAt, updatedAt)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                claim.id ? String(claim.id) : null,
-                Number(item.id),
-                claim.claimantId ? String(claim.claimantId) : null,
-                claim.claimantName || null,
-                claim.claimantEmail || null,
-                claim.description || null,
-                claim.claimedDate || null,
-                claim.proofPath || null,
-                claim.status || 'pending',
-                stringifyJson(claim.answers || []),
-                stringifyJson(claim.score || null),
-                claim.seenByClaimant ? 1 : 0,
-                claim.returnStatus || null,
-                claim.acceptedAt || null,
-                claim.returnWindowEndsAt || null,
-                claim.returnDueAt || null,
-                claim.verificationCode || null,
-                claim.returnRequestedAt || null,
-                claim.returnCompletedAt || null,
-                claim.returnReminderSentAt || null,
-                claim.createdAt || new Date().toISOString(),
-                claim.updatedAt || null,
-              ]
-            );
-          });
-        });
-      });
-      return { syncItems };
-    })();
-    syncItems(this.data.items || []);
+    // Full sync: delete and re-insert everything from in-memory data
+    await run('DELETE FROM claims');
+    await run('DELETE FROM items');
+
+    for (const item of (this.data.items || [])) {
+      await run(
+        `INSERT OR REPLACE INTO items
+          (id, userId, ownerEmail, type, title, name, description, location, locationDetails, dateLost,
+           category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy, status,
+           verificationQuestions, returnAdminConfirmedAt, returnAdminConfirmedBy, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [Number(item.id), item.userId ? String(item.userId) : null, item.ownerEmail || null,
+         item.type || 'lost', item.title || item.name || null, item.name || 'Untitled',
+         item.description || null, item.location || null, item.locationDetails || null,
+         item.dateLost || null, item.category || null, item.contactMethod || null,
+         item.anonymous ? 1 : 0, item.reportedByName || null, item.photoPath || null,
+         item.returnInfo || null, item.returnBy || null, item.status || 'reported',
+         stringifyJson(item.verificationQuestions || []),
+         item.returnAdminConfirmedAt || null, item.returnAdminConfirmedBy || null,
+         item.createdAt || new Date().toISOString(), item.updatedAt || null]
+      );
+      for (const claim of (item.claims || [])) {
+        await run(
+          `INSERT OR REPLACE INTO claims
+            (id, itemId, claimantId, claimantName, claimantEmail, description, claimedDate, proofPath,
+             status, answers, score, seenByClaimant, returnStatus, acceptedAt, returnWindowEndsAt,
+             returnDueAt, verificationCode, returnRequestedAt, returnCompletedAt,
+             returnReminderSentAt, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [claim.id ? String(claim.id) : require('crypto').randomUUID(),
+           Number(item.id), claim.claimantId ? String(claim.claimantId) : null,
+           claim.claimantName || null, claim.claimantEmail || null,
+           claim.description || null, claim.claimedDate || null, claim.proofPath || null,
+           claim.status || 'pending', stringifyJson(claim.answers || []),
+           stringifyJson(claim.score || null), claim.seenByClaimant ? 1 : 0,
+           claim.returnStatus || null, claim.acceptedAt || null,
+           claim.returnWindowEndsAt || null, claim.returnDueAt || null,
+           claim.verificationCode || null, claim.returnRequestedAt || null,
+           claim.returnCompletedAt || null, claim.returnReminderSentAt || null,
+           claim.createdAt || new Date().toISOString(), claim.updatedAt || null]
+        );
+      }
+    }
   },
-  
 };
 
-module.exports = {
-  init,
-  db,
-};
+// ── Init ───────────────────────────────────────────────────────────────────
+
+async function init() {
+  await initSchema();
+  await importJsonIfEmptyAsync();
+  await ensureAdminExists();
+}
+
+module.exports = { init, db };
