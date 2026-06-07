@@ -1,353 +1,239 @@
-# Lost2Found - Campus Lost & Found Application
+# Lost2Found — Campus Lost & Found Platform
 
-A web application to report and search for lost and found items on campus with user authentication, real-time messaging, and admin dashboard.
+> **Live:** [https://lost2found-chv7.onrender.com](https://lost2found-chv7.onrender.com)
 
-## Features
+A full-stack campus lost & found web application built for students. Report lost or found items, claim them with verification, and coordinate safe returns — all in one place.
 
-- 👤 User registration and authentication
-- 📝 Report lost or found items with photos
-- 🔍 Advanced search and filtering
-- 💬 Real-time messaging between users
-- 📊 Admin dashboard with analytics
-- 🎯 Claim management system
-- ✅ Item status tracking (open, pending, resolved)
+---
 
-## Prerequisites
+## ✨ Features
 
-Before you start, make sure you have:
+### For Students
+- **Report Lost or Found items** with photos, category, campus location dropdown
+- **Smart claim system** — separate flows for "I found this" vs "This is mine"
+- **Verification questions** — set by item owner to filter fake claims
+- **Real-time chat** — message finders/owners directly on the platform
+- **Dashboard** — track your posts, incoming claims, and claim history
+- **Wall of Kindness** — leaderboard rewarding students who return items
 
-- **Node.js** version 18 or higher (tested on Node 24)
-  - Download from: https://nodejs.org/
-  - Check installation: `node --version`
-- **npm** (comes with Node.js)
-  - Check installation: `npm --version`
-- **Git** (optional, for cloning the repo)
-  - Download from: https://git-scm.com/
+### Platform
+- 🔐 Secure authentication with student ID format validation
+- 📧 Email notifications (claim submitted, accepted, denied)
+- ⏰ Auto-archive items after 30 days (23-day reminder)
+- 📱 Mobile-friendly with bottom navigation bar
+- 🌙 Dark mode support
+- 🖼️ Cloudinary image upload with auto-optimization (800px, quality:auto)
+- 🗂️ Category-aware placeholder icons when no photo uploaded
 
-## Installation & Setup
+---
 
-### Step 1: Clone or Download the Repository
+## 🛠 Tech Stack
 
-**Option A: Using Git (Recommended)**
+| Layer | Technology |
+|-------|-----------|
+| Backend | Node.js + Express.js |
+| Views | EJS + express-ejs-layouts |
+| Database | Turso (libSQL / SQLite cloud) |
+| Session Store | Custom Turso-backed session store |
+| Image Upload | Cloudinary (multer-storage-cloudinary) |
+| Email | Nodemailer (Gmail SMTP) |
+| Scheduling | node-cron |
+| Security | helmet, express-rate-limit, xss, CSRF (signed cookie) |
+| Deployment | Render.com |
+
+---
+
+## 🚀 Local Development Setup
+
+### Prerequisites
+- Node.js 18+
+- npm
+
+### 1. Clone
 ```bash
-git clone https://github.com/your-username/LostAndFound-website.git
-cd LostAndFound-website-master
+git clone https://github.com/AlMaynulHasan/LostAndFound-website.git
+cd LostAndFound-website
 ```
 
-**Option B: Download as ZIP**
-1. Click "Code" → "Download ZIP" on GitHub
-2. Extract the ZIP file
-3. Open Command Prompt/PowerShell in the extracted folder
-
-### Step 2: Install Dependencies
-
-Navigate to the project folder in your terminal and run:
-
+### 2. Install dependencies
 ```bash
 npm install
 ```
 
-This will install all required packages (Express, EJS, lowdb, etc.)
-
-### Step 3: Configure Environment Variables
-
-Create a `.env` file in the project root (copy from `.env.example`):
-
+### 3. Create `.env` file
 ```bash
-CLOUDINARY_CLOUD_NAME=demo
-CLOUDINARY_API_KEY=demo_key
-CLOUDINARY_API_SECRET=demo_secret
-SESSION_SECRET=your-super-secret-session-key-change-this-in-production
-CLOUDINARY_FOLDER=lost2found
+cp .env.example .env
+```
+
+Edit `.env` with your values:
+
+```env
+# Server
 NODE_ENV=development
 PORT=3000
+SESSION_SECRET=any-random-secret-string
+
+# Database — leave blank to use local SQLite (data/lost2found.sqlite)
+TURSO_DATABASE_URL=
+TURSO_AUTH_TOKEN=
+
+# Cloudinary (optional — local disk used if not set)
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_FOLDER=lost2found
+
+# Email (optional — emails skipped if not set)
+MAIL_USER=your@gmail.com
+MAIL_PASS=your-gmail-app-password
+
+# Admin account (auto-created on first boot)
+ADMIN_EMAIL=admin@campus.edu
+ADMIN_PASSWORD=yourpassword
+ADMIN_NAME=Admin
+ADMIN_STUDENT_ID=ADMIN-0001
 ```
 
-**Note:** For image uploads, get real Cloudinary credentials from: https://cloudinary.com/
+> **Local mode:** Without Turso credentials, the app uses a local SQLite file at `data/lost2found.sqlite` — no external setup needed.
 
-### Step 4: Run the Server
-
+### 4. Run
 ```bash
 npm start
+# or with auto-restart:
+npm run dev
 ```
 
-You should see:
-```
-Lost2Found running at http://localhost:3000
-```
+Open: [http://localhost:3000](http://localhost:3000)
 
-### Step 5: Access the Application
+Admin account is auto-created on first boot using `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
-Open your browser and go to:
-```
-http://localhost:3000
-```
+---
 
-## Using the Application
-
-### For Users:
-
-1. **Register/Login**
-   - Click "Register" to create a new account
-   - Enter email, name, student ID, and password
-   - Login with your credentials
-
-2. **Report an Item**
-   - Click "Report Lost Item" or "Report Found Item"
-   - Fill in item details (name, category, description)
-   - Upload a photo (optional)
-   - Submit the report
-
-3. **Search Items**
-   - Use the search bar to find items
-   - Filter by category, location, type (lost/found)
-   - View item details and contact the reporter
-
-4. **Chat/Messaging**
-   - Click on an item to message the reporter
-   - View conversation history
-   - Mark messages as read
-
-5. **Dashboard**
-   - Track your reported items
-   - View claims on your items
-   - Check message notifications
-
-### For Admins:
-
-1. **Admin Login**
-   - Use admin credentials (if created)
-   - Access admin panel
-
-2. **Dashboard**
-   - View platform statistics
-   - Monitor pending claims
-   - Manage users and items
-
-## Project Structure
+## 📁 Project Structure
 
 ```
-LostAndFound-website-master/
-├── app.js                 # Main Express server
-├── db.js                  # Database configuration (lowdb)
-├── package.json           # Dependencies and scripts
-├── .env                   # Environment variables
-├── .env.example           # Example environment file
+LostAndFound-website/
+├── app.js                  # Express app setup, middleware, startup
+├── db.js                   # In-memory db object + init/write helpers
 │
-├── data/                  # Local JSON database
-│   └── db.json           # Application data storage
+├── db/
+│   ├── sqlite.js           # Dual-mode: Turso (prod) / better-sqlite3 (local)
+│   └── schema.sql          # Tables: users, items, claims, messages, sessions
 │
-├── models/               # Data models
-│   ├── user.js          # User model
-│   ├── item.js          # Item/Report model
-│   ├── message.js       # Messaging model
-│   └── admin.js         # Admin functions
+├── models/
+│   ├── user.js             # createUser, findByEmail, findById
+│   ├── item.js             # createItem, addClaim, updateClaimStatus, etc.
+│   ├── message.js          # createMessage, getConversations, getMessages
+│   └── admin.js            # Admin-specific queries
 │
-├── routes/              # API endpoints
-│   ├── auth.js         # Authentication routes
-│   ├── items.js        # Item management
-│   ├── chat.js         # Messaging
-│   ├── dashboard.js    # User dashboard
-│   ├── admin.js        # Admin panel
-│   └── index.js        # Home page
+├── routes/
+│   ├── index.js            # Home page + top helpers (Wall of Kindness)
+│   ├── auth.js             # Register, login, logout
+│   ├── items.js            # Report, search, claim, accept/deny, resolve
+│   ├── chat.js             # Messaging + SSE real-time stream
+│   ├── dashboard.js        # User dashboard
+│   └── admin.js            # Admin panel
 │
-├── views/              # EJS templates
-│   ├── index.ejs      # Home page
-│   ├── login.ejs      # Login page
-│   ├── register.ejs   # Registration page
-│   ├── item.ejs       # Item detail
-│   ├── chat.ejs       # Messaging page
-│   ├── dashboard.ejs  # User dashboard
-│   ├── admin.ejs      # Admin dashboard
-│   └── partials/      # Reusable components
+├── services/
+│   ├── mailer.js           # Nodemailer email helpers
+│   ├── cronJobs.js         # Auto-expiry cron (daily 08:00)
+│   ├── cloudinary.js       # Cloudinary config + default upload options
+│   └── tursoSessionStore.js # express-session store backed by Turso
 │
-├── public/            # Static files
-│   ├── css/
-│   │   └── styles.css
-│   ├── js/
-│   │   ├── app.js
-│   │   └── message.js
-│   ├── images/
-│   └── uploads/       # User uploaded images
+├── views/
+│   ├── layout.ejs          # Base layout (nav, footer, scripts)
+│   ├── index.ejs           # Homepage (recent items + Wall of Kindness)
+│   ├── report.ejs          # Lost/Found report form (tab switcher)
+│   ├── item.ejs            # Item detail + claim wizard
+│   ├── dashboard.ejs       # User dashboard (tabs: active/resolved/claims)
+│   ├── chat.ejs            # Real-time chat UI
+│   ├── search.ejs          # Search + filter results
+│   └── partials/
+│       ├── header.ejs
+│       ├── category-icon.ejs  # Category-based SVG placeholder icons
+│       └── ...
 │
-├── middleware/        # Custom middleware
-│   └── auth.js       # Authentication checks
+├── public/
+│   ├── css/styles.css
+│   └── js/app.js
 │
-└── services/         # External services
-    └── cloudinary.js # Image upload service
+├── scripts/
+│   └── create-admin.js     # Manual admin creation script
+│
+├── render.yaml             # Render.com deployment config
+└── .env.example            # Environment variable template
 ```
 
-## Complete Setup Command Reference
+---
 
-**For Windows (PowerShell):**
-```powershell
-# Navigate to project folder
-cd path\to\LostAndFound-website-master
+## 🌐 Deployment (Render.com)
 
-# Install dependencies
-npm install
+The app is deployed on [Render.com](https://render.com) using `render.yaml`.
 
-# Create .env file (copy from .env.example)
-Copy-Item .env.example .env
+### Environment variables required on Render:
 
-# Start server
-npm start
-```
+| Variable | Description |
+|----------|-------------|
+| `NODE_ENV` | `production` |
+| `SESSION_SECRET` | Random secret string |
+| `TURSO_DATABASE_URL` | `libsql://your-db.turso.io` |
+| `TURSO_AUTH_TOKEN` | Turso auth token |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `MAIL_USER` | Gmail address |
+| `MAIL_PASS` | Gmail App Password |
+| `ADMIN_EMAIL` | Admin account email |
+| `ADMIN_PASSWORD` | Admin account password |
+| `ADMIN_NAME` | Admin display name |
 
-**For Mac/Linux (Terminal):**
-```bash
-# Navigate to project folder
-cd path/to/LostAndFound-website-master
+---
 
-# Install dependencies
-npm install
+## 🔒 Security
 
-# Create .env file
-cp .env.example .env
+- **CSRF protection** — signed cookie-based token on all POST forms
+- **Helmet** — security headers including CSP
+- **Rate limiting** — 100 req/15min globally, 10 req/15min on auth routes
+- **XSS sanitization** — all user input sanitized before saving
+- **Student ID validation** — 16-digit campus format enforced
+- **No hardcoded credentials** — all secrets via environment variables
 
-# Start server
-npm start
-```
+---
 
-## Available Scripts
+## 📋 API Routes Summary
 
-```bash
-npm start          # Start the production server
-npm run dev        # Start with nodemon (auto-restart on changes)
-npm run migrate    # Run database migration
-npm audit          # Check for security vulnerabilities
-npm audit fix      # Auto-fix vulnerabilities
-```
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/` | Homepage |
+| `GET/POST` | `/auth/register` | Register |
+| `GET/POST` | `/auth/login` | Login |
+| `POST` | `/auth/logout` | Logout |
+| `GET` | `/items/search` | Search items |
+| `GET/POST` | `/items/report` | Report lost/found item |
+| `GET` | `/items/:id` | Item detail |
+| `POST` | `/items/:id/claim` | Submit claim |
+| `POST` | `/items/:id/claim/:claimId/accept` | Accept claim |
+| `POST` | `/items/:id/claim/:claimId/deny` | Deny claim |
+| `POST` | `/items/:id/resolve` | Mark as returned |
+| `GET` | `/chat` | Chat list |
+| `GET` | `/chat/:userId` | Chat with user |
+| `POST` | `/chat/send` | Send message |
+| `GET` | `/dashboard` | User dashboard |
+| `GET` | `/health` | Health check (returns `{status:"ok"}`) |
 
-## Database
+---
 
-The application uses **lowdb** - a lightweight JSON-based database:
+## 🧪 Testing the Full Flow
 
-- **Location:** `data/db.json`
-- **Data Types:** Users, Items, Messages, Sessions
-- **No Setup:** Works out of the box, no external database needed
-- **Persistence:** Data is saved to disk automatically
+1. Register two accounts in different browsers (or incognito)
+2. **User A:** Report a lost item with verification questions
+3. **User B:** Find the item → click "I Found This!" → fill the claim form
+4. **User A:** Go to Dashboard → review claim → Accept
+5. **User A & B:** Chat to arrange pickup
+6. **User A:** Click "Mark as Returned" after handover
 
-## Troubleshooting
+---
 
-### Error: "PORT 3000 is already in use"
-```bash
-# Change port in .env file
-PORT=3001
+## 📄 License
 
-# Then restart: npm start
-```
-
-### Error: "Cannot find module 'X'"
-```bash
-# Reinstall all dependencies
-npm install
-
-# Clear npm cache
-npm cache clean --force
-npm install
-```
-
-### Application won't start / Server crashes
-1. Check Node.js version: `node --version` (should be 18+)
-2. Delete `node_modules` folder and `package-lock.json`
-3. Run `npm install` again
-4. Check `.env` file exists and has correct values
-5. Run `npm start` again
-
-### Images not uploading
-- Configure real Cloudinary credentials in `.env`
-- Default demo credentials won't upload files
-
-### Can't access localhost:3000
-- Make sure server is running (you should see "Lost2Found running at..." message)
-- Try in different browser
-- Check firewall isn't blocking port 3000
-
-## Development Notes
-
-### File Locations:
-- **Server entry point:** `app.js`
-- **Database file:** `data/db.json`
-- **Session secret:** Change in `.env` for production
-- **Upload folder:** `public/uploads/`
-
-### Testing the Application:
-1. Register 2 different user accounts
-2. User 1: Report a lost item
-3. User 2: Search and find the item
-4. User 2: Send message to User 1
-5. Test messaging and claim features
-
-## API Endpoints Summary
-
-| Method | Route | Purpose |
-|--------|-------|---------|
-| POST | `/auth/register` | Create new user |
-| POST | `/auth/login` | User login |
-| GET | `/items/search` | Search items |
-| POST | `/items/report` | Report new item |
-| GET | `/items/:id` | View item details |
-| POST | `/chat/send` | Send message |
-| GET | `/dashboard` | User dashboard |
-| GET | `/admin` | Admin panel |
-
-## Performance Tips
-
-- Items are stored in JSON format (suitable for up to ~10,000 items)
-- For larger scale, upgrade to MongoDB
-- Sessions are stored in memory (restart clears sessions)
-- For production, add a proper session store
-
-## Next Steps
-
-1. **Customize Branding**
-   - Edit `styles.css` for colors/design
-   - Change content in `.ejs` view files
-
-2. **Add Features**
-   - SMS notifications
-   - Email alerts
-   - Image verification
-   - Advanced analytics
-
-3. **Deploy to Production**
-   - Use Vercel, Heroku, or AWS
-   - Update database to MongoDB
-   - Set strong `SESSION_SECRET`
-   - Enable HTTPS
-
-## License
-
-MIT License - Feel free to use and modify
-
-## Support
-
-For issues or questions:
-1. Check the Troubleshooting section above
-2. Review error messages in the console
-3. Check if `.env` file is configured correctly
-4. Verify Node.js version is 18+
-
-## Quick Start Summary
-
-```bash
-# 1. Clone/Download the repo
-git clone https://github.com/your-username/LostAndFound-website.git
-cd LostAndFound-website-master
-
-# 2. Install packages
-npm install
-
-# 3. Create .env file
-cp .env.example .env
-
-# 4. Start server
-npm start
-
-# 5. Open browser
-# http://localhost:3000
-```
-
-Done! Your Lost2Found application is now running! 🎉
-
+MIT — free to use and modify.
