@@ -64,9 +64,9 @@
           <!-- Location row -->
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label" id="locationLabel">
-                <span id="locationLabelLost">Where did you lose it? <span class="text-danger">*</span></span>
-                <span id="locationLabelFound" class="d-none">Where did you find it? <span class="text-danger">*</span></span>
+              <label class="form-label">
+                <span class="label-lost">Where did you lose it? <span class="text-danger">*</span></span>
+                <span class="label-found d-none">Where did you find it? <span class="text-danger">*</span></span>
               </label>
               <select name="location" class="form-select" required>
                 <option value="">-- Select location --</option>
@@ -96,9 +96,9 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label" id="dateLabel">
-                <span id="dateLabelLost">Date you lost it <span class="text-danger">*</span></span>
-                <span id="dateLabelFound" class="d-none">Date you found it <span class="text-danger">*</span></span>
+              <label class="form-label">
+                <span class="label-lost">Date you lost it <span class="text-danger">*</span></span>
+                <span class="label-found d-none">Date you found it <span class="text-danger">*</span></span>
               </label>
               <input type="date" name="dateLost" class="form-control" required max="<%= new Date().toISOString().split('T')[0] %>" />
             </div>
@@ -121,9 +121,9 @@
           <!-- Contact -->
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label" id="contactLabel">
-                <span id="contactLabelLost">Your contact <span class="text-danger">*</span></span>
-                <span id="contactLabelFound" class="d-none">Contact for pickup <span class="text-danger">*</span></span>
+              <label class="form-label">
+                <span class="label-lost">Your contact <span class="text-danger">*</span></span>
+                <span class="label-found d-none">Contact for pickup <span class="text-danger">*</span></span>
               </label>
               <input type="text" name="contactMethod" class="form-control" placeholder="Email or phone number" required />
             </div>
@@ -139,9 +139,9 @@
           <!-- Handover info — shown for FOUND, less prominent for LOST -->
           <div class="row g-3 mb-4" id="handoverSection">
             <div class="col-md-6">
-              <label class="form-label" id="returnInfoLabel">
-                <span id="returnInfoLost">Preferred handover location</span>
-                <span id="returnInfoFound" class="d-none">Where can owner pick it up? <span class="text-danger">*</span></span>
+              <label class="form-label">
+                <span class="label-lost">Preferred handover location</span>
+                <span class="label-found d-none">Where can owner pick it up? <span class="text-danger">*</span></span>
               </label>
               <input type="text" name="returnInfo" class="form-control"
                 id="returnInfoInput"
@@ -158,13 +158,13 @@
           <div id="verificationSection">
             <div class="d-flex align-items-center gap-2 mb-2">
               <h6 class="mb-0">Ownership verification questions</h6>
-              <span class="badge bg-danger-soft text-danger small" id="vqRequired">Required for Lost</span>
-              <span class="badge bg-success-soft text-success small d-none" id="vqOptional">Optional for Found</span>
+              <span class="badge bg-danger-soft text-danger small label-lost">Required for Lost</span>
+              <span class="badge bg-success-soft text-success small label-found d-none">Optional for Found</span>
             </div>
-            <p class="text-muted small mb-3" id="vqHelp">
+            <p class="text-muted small mb-3 label-lost">
               Set 3 questions only the real owner would know. Claimants must answer these to prove ownership.
             </p>
-            <p class="text-muted small mb-3 d-none" id="vqHelpFound">
+            <p class="text-muted small mb-3 label-found d-none">
               Optionally set questions to help verify the owner (e.g., "What's the brand?"). You can leave these blank if the item is easily identifiable.
             </p>
 
@@ -262,20 +262,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('reportHeadingLost').classList.toggle('d-none', !isLost);
     document.getElementById('reportHeadingFound').classList.toggle('d-none', isLost);
 
-    // Dynamic labels
-    ['locationLabel','dateLabel','contactLabel','returnInfoLabel'].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.querySelectorAll('[id$="Lost"]').forEach(function(e) { e.classList.toggle('d-none', !isLost); });
-      el.querySelectorAll('[id$="Found"]').forEach(function(e) { e.classList.toggle('d-none', isLost); });
-    });
+    // Dynamic labels — toggle .label-lost and .label-found classes
+    document.querySelectorAll('.label-lost').forEach(function(e) { e.classList.toggle('d-none', !isLost); });
+    document.querySelectorAll('.label-found').forEach(function(e) { e.classList.toggle('d-none', isLost); });
 
     // Verification questions
     document.querySelectorAll('.vq-input, .va-input').forEach(function(inp) { inp.required = isLost; });
-    document.getElementById('vqRequired').classList.toggle('d-none', !isLost);
-    document.getElementById('vqOptional').classList.toggle('d-none', isLost);
-    document.getElementById('vqHelp').classList.toggle('d-none', isLost);
-    document.getElementById('vqHelpFound').classList.toggle('d-none', !isLost);
 
     // Return info required for found
     document.getElementById('returnInfoInput').required = !isLost;

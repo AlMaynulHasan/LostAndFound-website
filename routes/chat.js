@@ -62,7 +62,13 @@ router.get('/stream', requireLogin, (req, res) => {
 
 router.get('/', requireLogin, async (req, res) => {
   const userId = req.session.user.id;
-  const conversations = await messageModel.getConversations(userId);
+  const rawConvos = await messageModel.getConversations(userId);
+  const conversations = rawConvos.map(c => ({
+    userId: c.partnerId,
+    name: c.partnerName || 'User',
+    lastMessage: c.lastMessage,
+    unreadCount: c.unreadCount || 0,
+  }));
   
   res.render('chat', {
     title: 'My Chats',
@@ -92,13 +98,19 @@ router.get('/:otherId', requireLogin, async (req, res) => {
   const otherId = req.params.otherId;
   await messageModel.markConversationRead(userId, otherId);
 
-  const conversations = await messageModel.getConversations(userId);
+  const rawConvos = await messageModel.getConversations(userId);
+  const conversations = rawConvos.map(c => ({
+    userId: c.partnerId,
+    name: c.partnerName || 'User',
+    lastMessage: c.lastMessage,
+    unreadCount: c.unreadCount || 0,
+  }));
   const messages = await messageModel.getMessages(userId, otherId);
   
   let activeChatUser = conversations.find(c => String(c.userId) === String(otherId));
   
   if (!activeChatUser) {
-    const user = await userModel.findById(Number(otherId));
+    const user = await userModel.findById(otherId);
     activeChatUser = { 
       userId: otherId, 
       name: user ? user.name : 'User' 
@@ -106,12 +118,12 @@ router.get('/:otherId', requireLogin, async (req, res) => {
   }
 
   res.render('chat', {
-    title: `Chat with ${activeChatUser.name}`,
+    title: 'Chat with ' + activeChatUser.name,
     user: req.session.user,
     conversations,
     activeChat: {
-        user: activeChatUser,
-        messages
+      user: activeChatUser,
+      messages
     },
     currentUser: req.session.user
   });
