@@ -261,6 +261,16 @@
       <form method="post" action="/items/<%= item.id %>/claim" enctype="multipart/form-data" id="claimWizardForm">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <div class="modal-body">
+
+          <% if (item.type === 'lost') { %>
+          <%# ══════════════════════════════════════════ %>
+          <%# LOST ITEM — Finder fills this form %>
+          <%# ══════════════════════════════════════════ %>
+          <div class="alert alert-info py-2 small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            You're reporting that you <strong>found</strong> this lost item. The owner will review and contact you.
+          </div>
+
           <!-- Progress bar -->
           <div class="claim-progress mb-3" id="claimProgress">
             <div class="claim-progress-dot done" data-step="1"></div>
@@ -269,29 +279,40 @@
             <div class="claim-progress-dot" data-step="4"></div>
           </div>
 
-          <!-- Step 1: Basic info -->
+          <!-- Step 1: Finder info -->
           <div class="claim-wizard-step active" id="claimStep1">
-            <p class="text-muted small mb-3"><%= item.type === "found" ? "Prove this item belongs to you." : "Describe where and when you found this item." %></p>
+            <h6 class="mb-3">Step 1 — Your details</h6>
             <div class="mb-3">
               <label class="form-label">Your name <span class="text-danger">*</span></label>
-              <input type="text" name="claimantDisplayName" class="form-control" placeholder="Full name" value="<%= currentUser ? currentUser.name : '' %>" required />
+              <input type="text" name="claimantDisplayName" class="form-control"
+                placeholder="Full name" value="<%= currentUser ? currentUser.name : '' %>" required />
             </div>
             <div class="mb-3">
-              <label class="form-label">When did you lose it? (optional)</label>
-              <input type="date" name="claimedDate" class="form-control" />
+              <label class="form-label">Where did you find it? <span class="text-danger">*</span></label>
+              <input type="text" name="foundLocation" class="form-control"
+                placeholder='e.g., "Main Library, 2nd floor"' required />
             </div>
             <div class="mb-3">
-              <label class="form-label">Contact method (optional)</label>
-              <input type="text" name="claimContact" class="form-control" placeholder="e.g., 01XXXXXXXXX or email" />
+              <label class="form-label">When did you find it?</label>
+              <input type="date" name="claimedDate" class="form-control"
+                max="<%= new Date().toISOString().split('T')[0] %>" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Your contact <span class="text-danger">*</span></label>
+              <input type="text" name="claimContact" class="form-control"
+                placeholder="Phone or email so the owner can reach you" required />
             </div>
           </div>
 
-          <!-- Step 2: Verification questions -->
+          <!-- Step 2: Verification answers (owner set these) -->
           <div class="claim-wizard-step" id="claimStep2">
-            <% if (item.verificationQuestions && item.verificationQuestions.length) { %>
-              <p class="text-muted small mb-3">Answer the questions set by the reporter. These help verify genuine ownership.</p>
+            <h6 class="mb-2">Step 2 — Verify you have the item</h6>
+            <% if (item.verificationQuestions && item.verificationQuestions.length > 0) { %>
+              <p class="text-muted small mb-3">
+                Answer these questions the owner set — only someone holding the item would know.
+              </p>
               <div class="d-grid gap-3">
-                <% item.verificationQuestions.forEach((entry, index) => { %>
+                <% item.verificationQuestions.forEach(function(entry) { %>
                   <div>
                     <label class="form-label fw-semibold"><%= entry.question %></label>
                     <input type="text" name="answers[]" class="form-control" placeholder="Your answer..." />
@@ -299,61 +320,170 @@
                 <% }) %>
               </div>
             <% } else { %>
-              <div class="text-center py-3">
-                <i class="bi bi-check-circle text-success" style="font-size:2rem;"></i>
-                <p class="mt-2 text-muted">No verification questions for this item. Click Next to continue.</p>
-                <!-- Dummy hidden input to keep answers[] array consistent -->
+              <div class="text-center py-4">
+                <i class="bi bi-check-circle text-success" style="font-size:2.5rem;"></i>
+                <p class="mt-2 text-muted">No verification questions set. Click Next to continue.</p>
                 <input type="hidden" name="answers[]" value="" />
               </div>
             <% } %>
           </div>
 
-          <!-- Step 3: Proof upload -->
+          <!-- Step 3: Photo of found item -->
           <div class="claim-wizard-step" id="claimStep3">
-            <p class="text-muted small mb-3">Upload a photo as proof of ownership (optional but recommended — e.g., you with the item, or a unique marking).</p>
+            <h6 class="mb-2">Step 3 — Upload a photo (recommended)</h6>
+            <p class="text-muted small mb-3">
+              A photo of the item you found helps the owner confirm it's theirs quickly.
+            </p>
+            <input type="file" name="proof" class="form-control mb-3" accept="image/*" id="proofFileInput">
             <div class="mb-3">
-              <label class="form-label">Proof photo <span class="text-muted">(optional)</span></label>
-              <input type="file" name="proof" class="form-control" accept="image/*" id="proofFileInput">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Additional description</label>
-              <textarea name="description" class="form-control" rows="3" placeholder="Describe a unique detail that proves ownership..."></textarea>
+              <label class="form-label">Additional notes</label>
+              <textarea name="description" class="form-control" rows="3"
+                placeholder="Any other details — condition, exactly where found, etc."></textarea>
             </div>
             <div id="proofPreview" class="mt-2" style="display:none;">
-              <img id="proofPreviewImg" src="" alt="Proof preview" style="max-width:100%; max-height:180px; border-radius:8px; object-fit:cover;" />
+              <img id="proofPreviewImg" src="" alt="Preview"
+                style="max-width:100%;max-height:180px;border-radius:8px;object-fit:cover;" />
             </div>
           </div>
 
-          <!-- Step 4: Confirmation summary -->
+          <!-- Step 4: Summary -->
           <div class="claim-wizard-step" id="claimStep4">
-            <p class="text-muted small mb-3">Review your claim before submitting.</p>
+            <h6 class="mb-3">Step 4 — Review & submit</h6>
             <div class="border rounded p-3 bg-light">
               <div class="claim-summary-row">
                 <span class="label">Item:</span>
                 <span><strong><%= item.name %></strong></span>
               </div>
-              <div class="claim-summary-row" id="summaryName">
+              <div class="claim-summary-row">
                 <span class="label">Your name:</span>
                 <span id="summaryNameVal">—</span>
               </div>
-              <div class="claim-summary-row" id="summaryDate">
+              <div class="claim-summary-row">
+                <span class="label">Found at:</span>
+                <span id="summaryFoundLoc">—</span>
+              </div>
+              <div class="claim-summary-row">
+                <span class="label">Your contact:</span>
+                <span id="summaryContact">—</span>
+              </div>
+              <div class="claim-summary-row">
+                <span class="label">Photo:</span>
+                <span id="summaryProofVal">No photo</span>
+              </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">
+              <i class="bi bi-shield-check me-1 text-teal"></i>
+              The owner will be notified and can contact you to arrange pickup.
+            </p>
+          </div>
+
+          <% } else { %>
+          <%# ══════════════════════════════════════════ %>
+          <%# FOUND ITEM — Owner proves it's theirs %>
+          <%# ══════════════════════════════════════════ %>
+          <div class="alert alert-warning py-2 small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Prove this item belongs to you. The finder will verify your answers.
+          </div>
+
+          <!-- Progress bar -->
+          <div class="claim-progress mb-3" id="claimProgress">
+            <div class="claim-progress-dot done" data-step="1"></div>
+            <div class="claim-progress-dot" data-step="2"></div>
+            <div class="claim-progress-dot" data-step="3"></div>
+            <div class="claim-progress-dot" data-step="4"></div>
+          </div>
+
+          <!-- Step 1: Owner info -->
+          <div class="claim-wizard-step active" id="claimStep1">
+            <h6 class="mb-3">Step 1 — Identify yourself</h6>
+            <div class="mb-3">
+              <label class="form-label">Your name <span class="text-danger">*</span></label>
+              <input type="text" name="claimantDisplayName" class="form-control"
+                placeholder="Full name" value="<%= currentUser ? currentUser.name : '' %>" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">When did you lose it?</label>
+              <input type="date" name="claimedDate" class="form-control"
+                max="<%= new Date().toISOString().split('T')[0] %>" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Your contact <span class="text-danger">*</span></label>
+              <input type="text" name="claimContact" class="form-control"
+                placeholder="Phone or email" required />
+            </div>
+          </div>
+
+          <!-- Step 2: Prove ownership -->
+          <div class="claim-wizard-step" id="claimStep2">
+            <h6 class="mb-2">Step 2 — Prove ownership</h6>
+            <% if (item.verificationQuestions && item.verificationQuestions.length > 0) { %>
+              <p class="text-muted small mb-3">
+                Answer these questions. Only the real owner would know these details.
+              </p>
+              <div class="d-grid gap-3">
+                <% item.verificationQuestions.forEach(function(entry) { %>
+                  <div>
+                    <label class="form-label fw-semibold"><%= entry.question %></label>
+                    <input type="text" name="answers[]" class="form-control" placeholder="Your answer..." />
+                  </div>
+                <% }) %>
+              </div>
+            <% } else { %>
+              <div class="text-center py-4">
+                <i class="bi bi-check-circle text-success" style="font-size:2.5rem;"></i>
+                <p class="mt-2 text-muted">No verification questions. Click Next to continue.</p>
+                <input type="hidden" name="answers[]" value="" />
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Step 3: Proof photo -->
+          <div class="claim-wizard-step" id="claimStep3">
+            <h6 class="mb-2">Step 3 — Upload proof of ownership</h6>
+            <p class="text-muted small mb-3">
+              Upload a photo proving this is yours — e.g., old photo with the item, receipt, or unique marking.
+            </p>
+            <input type="file" name="proof" class="form-control mb-3" accept="image/*" id="proofFileInput">
+            <div class="mb-3">
+              <label class="form-label">Describe something unique about this item</label>
+              <textarea name="description" class="form-control" rows="3"
+                placeholder="e.g., scratch on bottom-left corner, custom sticker on back..."></textarea>
+            </div>
+            <div id="proofPreview" class="mt-2" style="display:none;">
+              <img id="proofPreviewImg" src="" alt="Preview"
+                style="max-width:100%;max-height:180px;border-radius:8px;object-fit:cover;" />
+            </div>
+          </div>
+
+          <!-- Step 4: Summary -->
+          <div class="claim-wizard-step" id="claimStep4">
+            <h6 class="mb-3">Step 4 — Review & submit</h6>
+            <div class="border rounded p-3 bg-light">
+              <div class="claim-summary-row">
+                <span class="label">Item:</span>
+                <span><strong><%= item.name %></strong></span>
+              </div>
+              <div class="claim-summary-row">
+                <span class="label">Your name:</span>
+                <span id="summaryNameVal">—</span>
+              </div>
+              <div class="claim-summary-row">
                 <span class="label">Date lost:</span>
                 <span id="summaryDateVal">—</span>
               </div>
-              <div class="claim-summary-row" id="summaryAnswers">
-                <span class="label">Answers:</span>
-                <span id="summaryAnswersVal">—</span>
-              </div>
-              <div class="claim-summary-row" id="summaryProof">
+              <div class="claim-summary-row">
                 <span class="label">Proof:</span>
                 <span id="summaryProofVal">No photo</span>
               </div>
             </div>
             <p class="text-muted small mt-3 mb-0">
               <i class="bi bi-shield-check me-1 text-teal"></i>
-              The item reporter will review your claim and either accept or deny it.
+              The finder will review and contact you to arrange handover.
             </p>
           </div>
+          <% } %>
+
         </div>
 
         <!-- Navigation buttons -->
@@ -367,7 +497,7 @@
               Next <i class="bi bi-arrow-right ms-1"></i>
             </button>
             <button type="submit" class="btn btn-primary d-none" id="claimSubmitBtn">
-              <i class="bi bi-send me-1"></i>Submit claim
+              <i class="bi bi-send me-1"></i>Submit
             </button>
           </div>
         </div>

@@ -488,22 +488,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!form) return;
     const nameInput = form.querySelector('[name="claimantDisplayName"]');
     const dateInput = form.querySelector('[name="claimedDate"]');
-    const answerInputs = form.querySelectorAll('[name="answers[]"]');
+    const contactInput = form.querySelector('[name="claimContact"]');
+    const foundLocInput = form.querySelector('[name="foundLocation"]');
     const proofInput = getEl('proofFileInput');
 
     const nameEl = getEl('summaryNameVal');
     const dateEl = getEl('summaryDateVal');
-    const answersEl = getEl('summaryAnswersVal');
+    const contactEl = getEl('summaryContact');
+    const foundLocEl = getEl('summaryFoundLoc');
     const proofEl = getEl('summaryProofVal');
 
     if (nameEl && nameInput) nameEl.textContent = nameInput.value || '—';
     if (dateEl && dateInput) dateEl.textContent = dateInput.value || 'Not specified';
-    if (answersEl && answerInputs.length) {
-      const answers = Array.from(answerInputs)
-        .map((inp, i) => inp.value ? `Q${i + 1}: ${inp.value}` : null)
-        .filter(Boolean);
-      answersEl.textContent = answers.length ? answers.join(' · ') : 'None provided';
-    }
+    if (contactEl && contactInput) contactEl.textContent = contactInput.value || '—';
+    if (foundLocEl && foundLocInput) foundLocEl.textContent = foundLocInput.value || '—';
     if (proofEl && proofInput) {
       proofEl.textContent = proofInput.files && proofInput.files.length ? proofInput.files[0].name : 'No photo';
     }
