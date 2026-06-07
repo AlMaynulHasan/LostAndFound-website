@@ -5,10 +5,10 @@
 
         <!-- Type selector tabs -->
         <div class="report-type-tabs mb-4">
-          <button type="button" class="report-tab <%= prefillType === 'lost' ? 'active' : '' %>" onclick="switchReportType('lost')">
+          <button type="button" class="report-tab <%= prefillType === 'lost' ? 'active' : '' %>" onclick="switchReportType('lost', this)">
             <i class="bi bi-search me-2"></i>I Lost Something
           </button>
-          <button type="button" class="report-tab <%= prefillType === 'found' ? 'active' : '' %>" onclick="switchReportType('found')">
+          <button type="button" class="report-tab <%= prefillType === 'found' ? 'active' : '' %>" onclick="switchReportType('found', this)">
             <i class="bi bi-hand-thumbs-up me-2"></i>I Found Something
           </button>
         </div>
@@ -247,13 +247,13 @@
 </div>
 
 <script>
-function switchReportType(type) {
+function switchReportType(type, btn) {
   // Update hidden input
   document.getElementById('reportTypeInput').value = type;
 
   // Toggle tabs
   document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
-  event.target.closest('.report-tab').classList.add('active');
+  if (btn) btn.classList.add('active');
 
   const isLost = type === 'lost';
 
