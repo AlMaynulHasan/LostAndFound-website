@@ -16,7 +16,7 @@ async function createItem(item) {
   // Sanitize user input to prevent XSS
   const now = new Date().toISOString();
 
-  const result = run(
+  const result = await run(
     `INSERT INTO items
       (userId, ownerEmail, type, title, name, description, location, locationDetails, dateLost,
        category, contactMethod, anonymous, reportedByName, photoPath, returnInfo, returnBy, status,
@@ -129,7 +129,7 @@ async function updateItemStatus(id, status) {
 async function updateStatus(id, status) {
   const { run } = require('../db/sqlite');
   const now = new Date().toISOString();
-  const result = run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', [status, now, Number(id)]);
+  const result = await run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', [status, now, Number(id)]);
   if (result.changes === 0) return null;
   const item = { id: Number(id), status, updatedAt: now };
   return item;
@@ -138,10 +138,10 @@ async function updateStatus(id, status) {
 async function addClaim(itemId, claim) {
   const { run, get, stringifyJson } = require('../db/sqlite');
   const now = new Date().toISOString();
-  const itemExists = get('SELECT id FROM items WHERE id = ?', [Number(itemId)]);
+  const itemExists = await get('SELECT id FROM items WHERE id = ?', [Number(itemId)]);
   if (!itemExists) return null;
-  run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['pending_claim', now, Number(itemId)]);
-  run(
+  await run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['pending_claim', now, Number(itemId)]);
+  await run(
     `INSERT INTO claims (id, itemId, claimantId, claimantName, claimantEmail, description,
        claimedDate, proofPath, status, answers, score, seenByClaimant, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
@@ -167,7 +167,7 @@ async function updateClaimStatus(itemId, claimId, status) {
   const { run, get, all, stringifyJson } = require('../db/sqlite');
   const now = new Date().toISOString();
 
-  const claim = get('SELECT * FROM claims WHERE id = ? AND itemId = ?', [String(claimId), Number(itemId)]);
+  const claim = await get('SELECT * FROM claims WHERE id = ? AND itemId = ?', [String(claimId), Number(itemId)]);
   if (!claim) return null;
 
   const updates = { status, updatedAt: now, seenByClaimant: (status === 'accepted' || status === 'denied') ? 0 : 1 };
@@ -179,15 +179,15 @@ async function updateClaimStatus(itemId, claimId, status) {
     updates.returnDueAt = new Date(acceptedAt.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString();
     updates.returnStatus = claim.returnStatus || 'none';
     updates.verificationCode = Math.random().toString(36).substr(2, 6).toUpperCase();
-    run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['reported', now, Number(itemId)]);
+    await run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['reported', now, Number(itemId)]);
   } else if (status === 'denied') {
-    const pending = all('SELECT id FROM claims WHERE itemId = ? AND status = ? AND id != ?', [Number(itemId), 'pending', String(claimId)]);
+    const pending = await all('SELECT id FROM claims WHERE itemId = ? AND status = ? AND id != ?', [Number(itemId), 'pending', String(claimId)]);
     if (pending.length === 0) {
-      run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['reported', now, Number(itemId)]);
+      await run('UPDATE items SET status = ?, updatedAt = ? WHERE id = ?', ['reported', now, Number(itemId)]);
     }
   }
 
-  run(
+  await run(
     `UPDATE claims SET status=?, updatedAt=?, seenByClaimant=?,
        acceptedAt=COALESCE(?,acceptedAt), returnWindowEndsAt=COALESCE(?,returnWindowEndsAt),
        returnDueAt=COALESCE(?,returnDueAt), returnStatus=COALESCE(?,returnStatus),
@@ -199,7 +199,7 @@ async function updateClaimStatus(itemId, claimId, status) {
      updates.verificationCode||null, String(claimId)]
   );
 
-  return get('SELECT * FROM claims WHERE id = ?', [String(claimId)]);
+  return await get('SELECT * FROM claims WHERE id = ?', [String(claimId)]);
 }
 
 async function getClaimDecisionCountForClaimant(userId) {
@@ -368,7 +368,7 @@ async function findSimilarItems(sourceItem, limit = 3) {
 
 async function deleteItem(id) {
   const { run } = require('../db/sqlite');
-  const result = run('DELETE FROM items WHERE id = ?', [Number(id)]);
+  const result = await run('DELETE FROM items WHERE id = ?', [Number(id)]);
   if (result.changes === 0) return false;
   const deleted = true;
   return true;

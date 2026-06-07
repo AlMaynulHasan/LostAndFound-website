@@ -14,6 +14,7 @@
           <a href="/items/<%= item.id %>" class="btn btn-outline-secondary">Cancel</a>
         </div>
         <form method="post" action="/items/<%= item.id %>/update" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Report type</label>
@@ -212,6 +213,7 @@
       <h6 class="mb-2">Admin return</h6>
       <% if (!adminReturnConfirmedAt) { %>
         <form method="post" action="/items/<%= item.id %>/return-admin" class="d-grid gap-2">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <button class="btn btn-primary" type="submit">Confirm return to owner</button>
         </form>
       <% } else { %>
@@ -226,6 +228,7 @@
       <hr />
       <h6 class="mb-2">Update status</h6>
       <form method="post" action="/items/<%= item.id %>/resolve" class="d-grid gap-2">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <button class="btn btn-success" type="submit">
           <i class="bi bi-check-circle me-1"></i>Mark as Returned
         </button>
